@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ultramilausha — Күк һәрвакыт аяз</title>
+<meta name="description" content="Напиши стихотворение, ловя слова с неба. Игра к синглу ultramilausha «Күк һәрвакыт аяз».">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="stage">
+  <div class="frame" id="frame">
+    <canvas id="c" width="320" height="480"></canvas>
+
+    <div class="ui" id="ui">
+
+      <!-- кнопка звука -->
+      <button class="sound" id="sound" aria-label="звук">♪</button>
+
+      <!-- ЗАСТАВКА -->
+      <section class="screen active" id="s-title">
+        <div class="titleblock">
+          <div class="artist">ultramilausha</div>
+          <h1 class="single">Күк<br>һәрвакыт<br>аяз</h1>
+        </div>
+        <div class="cloud cloud-sm"><div class="cbody center-text">Выбери свою партию</div></div>
+        <div class="parties" id="parties"></div>
+      </section>
+
+      <!-- ИНСТРУКЦИЯ -->
+      <section class="screen" id="s-howto">
+        <div class="cloud"><div class="cbody">
+          <p>Сейчас мы будем писать стихотворение.</p>
+          <p>Это очень просто. Название у него уже есть — это название твоей партии.</p>
+          <p>Теперь мы будем писать первую строчку. Напиши её начало и поймай конец.</p>
+        </div></div>
+        <div class="poemline" id="howto-line"></div>
+        <button class="btn" id="howto-next">Дальше</button>
+      </section>
+
+      <!-- ВВОД СТРОКИ -->
+      <section class="screen" id="s-line">
+        <div class="cloud cloud-poem"><div class="cbody">
+          <div class="poem" id="line-poem"></div>
+        </div></div>
+        <div class="cloud cloud-sm"><div class="cbody">
+          <span class="lbl" id="line-label"></span>
+        </div></div>
+        <div class="cloud cloud-input"><div class="cbody">
+          <input class="field" id="line-input" type="text" maxlength="42"
+                 autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="…">
+        </div></div>
+        <div class="err" id="line-err"></div>
+        <button class="btn" id="line-next">Ловить слово</button>
+      </section>
+
+      <!-- ИГРА -->
+      <section class="screen screen-game" id="s-game">
+        <div class="hud" id="hud"></div>
+        <div class="tip" id="tip">веди пальцем&nbsp;&nbsp;·&nbsp;&nbsp;← →</div>
+      </section>
+
+      <!-- ФИНАЛ -->
+      <section class="screen" id="s-final">
+        <div class="cloud cloud-poem"><div class="cbody">
+          <div class="poem poem-final" id="final-poem"></div>
+        </div></div>
+        <div class="share" id="share">
+          <button class="btn btn-wide" id="sh-native">Отправить</button>
+          <button class="btn btn-insta" id="sh-insta">Опубликовать в инстаграме</button>
+          <div class="share-row">
+            <button class="btn btn-sm" id="sh-tg">Telegram</button>
+            <button class="btn btn-sm" id="sh-wa">WhatsApp</button>
+          </div>
+          <div class="share-row">
+            <button class="btn btn-sm" id="sh-mail">Почта</button>
+            <button class="btn btn-sm" id="sh-copy">Копировать</button>
+          </div>
+          <button class="btn btn-ghost" id="sh-again">Играть снова</button>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/words.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

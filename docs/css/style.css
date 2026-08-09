@@ -1,0 +1,245 @@
+/* ==========================================================
+   ultramilausha — Күк һәрвакыт аяз
+   Пиксельная игра-стихотворение
+   ========================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: #180a24;
+  font-family: "Menlo", "Consolas", "DejaVu Sans Mono", "Courier New", monospace;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 50% 40%, #3a1c47 0%, #180a24 70%, #0d0516 100%);
+}
+
+.stage {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.frame {
+  position: relative;
+  width: 320px; height: 480px;
+  flex: 0 0 auto;
+  transform-origin: center center;
+  box-shadow: 0 0 0 4px #2b1338, 0 0 40px rgba(255, 150, 200, .22);
+  overflow: hidden;
+}
+
+canvas {
+  position: absolute; inset: 0;
+  width: 320px; height: 480px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+}
+
+/* лёгкие «сканлайны» — привет 90-м */
+.frame::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom, rgba(0,0,0,.11) 0 1px, rgba(0,0,0,0) 1px 3px);
+  z-index: 30;
+}
+
+.ui { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+
+/* ---------- экраны ---------- */
+.screen {
+  position: absolute; inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 14px;
+  overflow: hidden;
+}
+.screen.active { display: flex; pointer-events: auto; }
+.screen-game.active { pointer-events: none; justify-content: flex-start; }
+
+/* ==========================================================
+   ОБЛАКА
+   Тело + «пуфы» по краям, обведённые одним общим контуром
+   через drop-shadow. Пуфы добавляет JS каждому .cloud.
+   ========================================================== */
+.cloud {
+  position: relative;
+  width: 100%;
+  margin: 20px 0 16px;
+  filter:
+    drop-shadow(3px 0 0 #ffc2dd) drop-shadow(-3px 0 0 #ffc2dd)
+    drop-shadow(0 3px 0 #ffc2dd) drop-shadow(0 -3px 0 #ffc2dd)
+    drop-shadow(0 7px 0 rgba(70, 25, 80, .3));
+}
+.cloud .cbody {
+  position: relative;
+  z-index: 1;
+  background: #fffdfa;
+  border-radius: 16px;
+  padding: 12px 15px;
+  color: #4a2350;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.cloud .puff {
+  position: absolute;
+  z-index: 0;
+  background: #fffdfa;
+  border-radius: 50%;
+}
+.cloud p + p { margin-top: 7px; }
+.cloud-sm .cbody { font-size: 10px; padding: 9px 13px; }
+.cloud-sm { margin: 16px 0 12px; }
+.center-text { text-align: center; }
+
+/* облако-поле для ввода */
+.cloud-input { margin: 16px 0 10px; }
+.cloud-input .cbody { padding: 7px 14px; background: #fff6fb; }
+.cloud-input .puff { background: #fff6fb; }
+
+/* облако со стихотворением */
+.cloud-poem .cbody { padding: 13px 16px; }
+
+/* ---------- заставка ---------- */
+#s-title { padding-bottom: 74px; }
+.titleblock { text-align: center; margin-bottom: 2px; }
+.artist {
+  font-size: 11px; letter-spacing: 3px;
+  color: #ffe6f2; text-transform: lowercase;
+  text-shadow: 2px 2px 0 #6b1d4a;
+  margin-bottom: 8px;
+}
+.single {
+  font-size: 26px; line-height: 1.06; font-weight: 700;
+  color: #fffdfa; letter-spacing: 1px;
+  text-shadow: 3px 3px 0 #a02a63, 6px 6px 0 rgba(60,20,70,.4);
+}
+
+.parties { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+
+/* ---------- кнопки ---------- */
+.btn {
+  font: inherit;
+  font-size: 11px;
+  color: #4a2350;
+  background: #ffe9f4;
+  border: 3px solid #ffffff;
+  box-shadow: 0 5px 0 #a8548a, 0 5px 0 3px rgba(40,10,50,.35);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  transition: transform .05s;
+}
+.btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #a8548a, 0 1px 0 3px rgba(40,10,50,.35); }
+.btn-sm { font-size: 10px; padding: 9px 6px; }
+.btn-wide { background: #fff6ba; }
+.btn-insta {
+  background: linear-gradient(100deg, #ffd9a8 0%, #ffb0c4 45%, #d3a4ee 100%);
+  font-size: 10px;
+}
+.btn-ghost {
+  background: transparent; color: #ffe6f2; border-color: rgba(255,255,255,.5);
+  box-shadow: none; font-size: 10px; padding: 8px;
+}
+.btn-ghost:active { transform: translateY(2px); box-shadow: none; }
+
+.party { display: flex; align-items: center; gap: 8px; text-align: left; }
+.party .num {
+  flex: 0 0 auto;
+  width: 20px; height: 20px; line-height: 15px; text-align: center;
+  border: 3px solid #a8548a; border-radius: 4px;
+  background: #fff; font-size: 10px;
+}
+.party .nm { flex: 1 1 auto; }
+.party .hint { font-size: 8px; opacity: .55; display: block; margin-top: 2px; }
+
+/* ---------- поля ---------- */
+.lbl { display: block; font-size: 10px; line-height: 1.5; color: #7a3c72; text-align: center; }
+.field {
+  font: inherit; font-size: 14px;
+  width: 86%;
+  display: block;
+  margin: 0 auto;
+  padding: 5px 2px;
+  color: #3a1c44;
+  background: transparent;
+  border: none;
+  border-bottom: 2px dashed #ffb9d8;
+  border-radius: 0;
+  outline: none;
+  text-align: center;
+}
+.field:focus { border-bottom-color: #ff85b8; }
+.field::placeholder { color: #e2b6cd; }
+.err {
+  font-size: 9px; color: #ffd6e6; min-height: 11px;
+  text-shadow: 1px 1px 0 rgba(60,20,70,.8);
+}
+
+/* ---------- стихотворение ---------- */
+.poem { color: #3a1c44; font-size: 12px; line-height: 1.7; }
+.poem .ptitle {
+  font-size: 12px; font-weight: 700; color: #c0356a;
+  text-align: center; padding-bottom: 5px; margin-bottom: 5px;
+  border-bottom: 2px dotted #ffc2dd;
+}
+.poem div { white-space: pre-wrap; }
+.poem .caught { color: #c0356a; font-weight: 700; }
+.poem .cursor { color: #c0356a; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.poem-final { font-size: 12px; }
+
+.poemline {
+  font-size: 12px; color: #fffdfa; text-align: center;
+  text-shadow: 2px 2px 0 rgba(60,20,70,.65);
+}
+
+/* ---------- игра ---------- */
+.hud {
+  position: absolute; top: 8px; left: 0; right: 0;
+  text-align: center; font-size: 9px;
+  color: #fffdfa; text-shadow: 2px 2px 0 rgba(0,0,0,.55);
+  letter-spacing: 1px;
+}
+.tip {
+  position: absolute; bottom: 14px; left: 0; right: 0;
+  text-align: center; font-size: 9px;
+  color: rgba(255,255,255,.85); text-shadow: 2px 2px 0 rgba(0,0,0,.5);
+  transition: opacity .6s;
+}
+.tip.hide { opacity: 0; }
+
+/* ---------- звук ---------- */
+.sound {
+  position: absolute; top: 6px; right: 6px; z-index: 40; pointer-events: auto;
+  width: 22px; height: 22px;
+  font: inherit; font-size: 11px; line-height: 1;
+  color: #4a2350; background: rgba(255,255,255,.8);
+  border: 2px solid rgba(255,255,255,.9); border-radius: 4px;
+  cursor: pointer;
+}
+.sound.off { color: #b06a90; opacity: .6; }
+
+/* ---------- шеринг ---------- */
+.share { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.share-row { display: flex; gap: 6px; }
+.toast {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  width: 84%; text-align: center;
+  background: #fffdfa; color: #4a2350; border: 3px solid #ffd0e4;
+  border-radius: 8px; padding: 7px 12px; font-size: 10px; z-index: 50;
+  box-shadow: 0 4px 0 rgba(70,25,80,.3);
+}
