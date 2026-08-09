@@ -5,7 +5,7 @@
 const CONFIG = {
   // ВРЕМЕННЫЕ ССЫЛКИ — заменить на настоящие
   RELEASE_URL: 'https://example.com/ultramilausha/kuk-hervakyt-ayaz',
-  SITE_URL: 'https://example.com/ayaz',
+  SITE_URL: 'https://aidarkhusnutdinov.github.io/kuk-hervakyt-ayaz/',
 
   ARTIST: 'ultramilausha',
   SINGLE: 'Күк һәрвакыт аяз',
