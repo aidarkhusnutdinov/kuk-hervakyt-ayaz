@@ -329,63 +329,71 @@ function jagged(g, base, color, amp, step, seed) {
 }
 
 /* =========================================================================
-   СЦЕНА 4 — ДИҢГЕЗ: под водой в красном море
+   СЦЕНА 4 — ДИҢГЕЗ: под водой в Красном море
+   (Красное — это название, вода бирюзовая, риф пёстрый)
    ========================================================================= */
 const BUBBLES = seeded(30, 61);
 const FISH = seeded(9, 23);
+const FISH_COLORS = [
+  ['#ffd23f', '#e2a51c'],   // жёлтая
+  ['#ff8a3d', '#ffffff'],   // рыба-клоун
+  ['#4fd8ff', '#1f9ed6'],   // голубая
+  ['#ff6f9c', '#d84373'],   // розовая
+  ['#8ef0c8', '#3fbf94']    // мятная
+];
 
 function sceneSea(g, t) {
   drawSky(g, [
-    [0, '#ff9c6a'],
-    [46, '#f2603f'],
-    [120, '#cc2b34'],
-    [210, '#991426'],
-    [300, '#68091d'],
-    [396, '#440614']
+    [0, '#b6f4f0'],
+    [40, '#6fdcea'],
+    [110, '#31b9dd'],
+    [200, '#1a93c9'],
+    [300, '#1170ab'],
+    [392, '#0b5285']
   ]);
 
   // поверхность воды с волнами
   for (let x = 0; x < W; x++) {
     const h = 6 + Math.sin(x * 0.09 + t * 1.6) * 3 + Math.sin(x * 0.21 - t) * 2;
-    R(g, x, 0, 1, h, '#ffd9a8');
-    R(g, x, h, 1, 3, '#ffb27e');
+    R(g, x, 0, 1, h, '#eafcff');
+    R(g, x, h, 1, 3, '#a9ecf5');
   }
 
   // солнечные столбы света
   for (let i = 0; i < 5; i++) {
     const bx = 30 + i * 64 + Math.sin(t * 0.25 + i) * 14;
-    for (let y = 10; y < 300; y += 4) {
+    for (let y = 10; y < 320; y += 4) {
       const w = 12 + y * 0.06;
-      R(g, bx + y * 0.16, y, w, 4, 'rgba(255,220,170,0.05)');
+      R(g, bx + y * 0.16, y, w, 4, 'rgba(240,255,255,0.055)');
     }
   }
 
-  // дно
-  R(g, 0, 424, W, H - 424, '#7d1f2c');
+  // песчаное дно
+  R(g, 0, 424, W, H - 424, '#f2e0b0');
   for (let x = 0; x < W; x++) {
     const h = 8 + Math.abs(Math.sin(x * 0.05)) * 8;
-    R(g, x, 424 - h, 1, h, '#8f2a34');
+    R(g, x, 424 - h, 1, h, '#e8d29a');
   }
   for (let i = 0; i < 60; i++) {
-    R(g, (i * 37) % W, 428 + ((i * 13) % 44), 2, 2, i % 3 ? '#a03a42' : '#611722');
+    R(g, (i * 37) % W, 428 + ((i * 13) % 44), 2, 2, i % 3 ? '#dcc487' : '#fff3cf');
   }
 
   // водоросли
-  weed(g, 24, 428, 66, t, '#c8455a');
-  weed(g, 52, 428, 48, t + 1.4, '#e0607a');
-  weed(g, 214, 428, 58, t + 0.6, '#c8455a');
-  weed(g, 292, 428, 72, t + 2.1, '#a83450');
+  weed(g, 24, 428, 66, t, '#2f9e78');
+  weed(g, 52, 428, 48, t + 1.4, '#48bd90');
+  weed(g, 214, 428, 58, t + 0.6, '#2f9e78');
+  weed(g, 292, 428, 72, t + 2.1, '#27866a');
 
   // кораллы
-  coral(g, 84, 430, '#ff9ec4', '#ffd0e4');
-  coral(g, 152, 434, '#ffb27e', '#ffe1c0');
-  coral(g, 250, 430, '#d38ae8', '#f0c6ff');
-  brainCoral(g, 190, 436, '#ff7fa8');
-  brainCoral(g, 116, 440, '#e0607a');
+  coral(g, 84, 430, '#ff7fa8', '#ffd0e4');
+  coral(g, 152, 434, '#ff9d4d', '#ffd9a8');
+  coral(g, 250, 430, '#a86bff', '#e0c6ff');
+  brainCoral(g, 190, 436, '#ffcf5c');
+  brainCoral(g, 116, 440, '#ff8f6b');
 
   // морские звёзды
-  star(g, 62, 452, '#ffd27a');
-  star(g, 226, 458, '#ff9ec4');
+  star(g, 62, 452, '#ff7f5c');
+  star(g, 226, 458, '#ffd23f');
 
   // рыбы
   for (let i = 0; i < FISH.length; i++) {
@@ -395,14 +403,15 @@ function sceneSea(g, t) {
     const raw = (t * speed + a * 500) % (W + 80);
     const x = dir > 0 ? raw - 40 : W + 40 - raw;
     const y = 120 + b * 260 + Math.sin(t * 1.4 + a * 8) * 7;
-    fish(g, x, y, dir, c > 0.6 ? '#ffd27a' : '#ffe9c9', c > 0.6 ? '#e0913a' : '#d8a98c', 1 + Math.round(c));
+    const col = FISH_COLORS[i % FISH_COLORS.length];
+    fish(g, x, y, dir, col[0], col[1], 1 + Math.round(c));
   }
 
   // медуза
   const jy = 250 + Math.sin(t * 0.7) * 18;
-  circleFill(g, 286, jy, 9, 'rgba(255,200,225,0.85)');
+  circleFill(g, 286, jy, 9, 'rgba(255,235,250,0.85)');
   for (let i = 0; i < 4; i++) {
-    R(g, 280 + i * 4, jy + 6, 2, 12 + Math.sin(t * 2 + i) * 4, 'rgba(255,200,225,0.6)');
+    R(g, 280 + i * 4, jy + 6, 2, 12 + Math.sin(t * 2 + i) * 4, 'rgba(255,235,250,0.6)');
   }
 
   // пузырьки
@@ -410,7 +419,7 @@ function sceneSea(g, t) {
     const y = H - ((t * (18 + c * 26) + b * 460) % 470);
     const x = a * W + Math.sin(t * 1.6 + b * 9) * 5;
     const r = c > 0.75 ? 3 : 2;
-    R(g, x, y, r, r, 'rgba(255,225,205,0.7)');
+    R(g, x, y, r, r, 'rgba(235,255,255,0.75)');
   }
 }
 
@@ -507,6 +516,143 @@ function drawHero(g, x, y, pal, t) {
   R(g, cx + 1, by + 10, 2, 7, pal.legs);
 }
 
+/* =========================================================================
+   СЦЕНА 5 — АЛТЫН КОЯШ НУРЛАРЫ: золотое поле, залитое солнцем
+   ========================================================================= */
+const MOTES = seeded(38, 137);
+
+function sceneGold(g, t) {
+  drawSky(g, [
+    [0, '#fff0b8'],
+    [50, '#ffe08a'],
+    [120, '#ffcb63'],
+    [200, '#ffb347'],
+    [270, '#ff9f3c'],
+    [330, '#f8bc4e']
+  ]);
+
+  const sx = 196, sy = 104;
+
+  // вращающиеся лучи
+  g.save();
+  g.globalAlpha = 0.16;
+  g.fillStyle = '#fff6cf';
+  for (let i = 0; i < 14; i++) {
+    const a = t * 0.09 + i * (Math.PI * 2 / 14);
+    const w = 0.06 + (i % 3) * 0.02;
+    g.beginPath();
+    g.moveTo(sx, sy);
+    g.lineTo(sx + Math.cos(a - w) * 420, sy + Math.sin(a - w) * 420);
+    g.lineTo(sx + Math.cos(a + w) * 420, sy + Math.sin(a + w) * 420);
+    g.closePath();
+    g.fill();
+  }
+  g.restore();
+
+  // солнце
+  circleFill(g, sx, sy, 42, 'rgba(255,246,207,0.35)');
+  circleFill(g, sx, sy, 33, '#fff3bd');
+  circleFill(g, sx, sy, 26, '#fffdf0');
+
+  // дальние холмы
+  ridge(g, 322, '#e8a93e', 20, 0.019, 4);
+  ridge(g, 338, '#d4902f', 15, 0.031, 9);
+
+  // тополя на горизонте
+  for (const [px, ph] of [[36, 34], [58, 26], [252, 30], [274, 22], [292, 36]]) {
+    R(g, px, 336 - ph, 3, ph, '#a86f22');
+    for (let k = 0; k < 5; k++) {
+      R(g, px - 3 + (k % 2), 336 - ph - 4 + k * (ph / 6), 8 - k, ph / 5, '#c98a26');
+    }
+  }
+
+  // поле — задний ряд
+  R(g, 0, 340, W, H - 340, '#e8ab3a');
+  wheat(g, 340, 24, 4, t * 1.0, '#d9992e', '#f2c465');
+  // поле — передний ряд
+  R(g, 0, 392, W, H - 392, '#d0912a');
+  wheat(g, 392, 38, 4, t * 1.25, '#b87a1e', '#ffd76a');
+  R(g, 0, 452, W, H - 452, '#b87a1e');
+  wheat(g, 452, 48, 5, t * 1.5, '#9c6416', '#ffe9a8');
+
+  // птицы
+  for (let i = 0; i < 3; i++) {
+    const bx = ((t * (9 + i * 4) + i * 130) % (W + 60)) - 30;
+    const by = 62 + i * 26 + Math.sin(t * 0.9 + i) * 5;
+    const f = Math.sin(t * 5 + i) > 0 ? 1 : 0;
+    R(g, bx, by, 3, 1, '#8a5a18');
+    R(g, bx + 3, by - f, 2, 1, '#8a5a18');
+    R(g, bx + 5, by, 3, 1, '#8a5a18');
+  }
+
+  // золотая пыльца в воздухе
+  for (const [a, b, c] of MOTES) {
+    const x = ((a * W + t * (5 + c * 10)) % (W + 20)) - 10;
+    const y = 60 + b * 300 + Math.sin(t * 1.1 + b * 10) * 10;
+    const tw = Math.sin(t * 2.5 + a * 12);
+    if (tw > -0.3) R(g, x, y, c > 0.7 ? 2 : 1, c > 0.7 ? 2 : 1, tw > 0.85 ? '#ffffff' : '#fff3bd');
+  }
+}
+
+function wheat(g, base, len, step, t, stalk, ear) {
+  for (let x = -2; x < W + 2; x += step) {
+    const h = len - ((x * 7) % 9) - ((x * 13) % 5);
+    const sway = Math.sin(t + x * 0.08) * 2.5;
+    for (let k = 0; k < h; k += 2) {
+      R(g, x + sway * (k / h), base - k, 2, 2, stalk);
+    }
+    if ((x * 3) % 7 !== 0) {
+      R(g, x + sway - 1, base - h - 4, 3, 5, ear);
+      R(g, x + sway, base - h - 6, 2, 3, ear);
+    } else {
+      R(g, x + sway, base - h - 3, 2, 4, ear);
+    }
+  }
+}
+
+/* Аквалангист — герой подводной главы. Плывёт горизонтально, лицом по ходу. */
+function drawDiver(g, x, y, pal, t, dir) {
+  dir = dir || 1;
+  const fl = Math.round(Math.sin(t * 4) * 2);
+  const put = (ox, oy, w, h, c) => {
+    const px = dir > 0 ? x + ox : x - (ox + w);
+    R(g, px, y + oy, w, h, c);
+  };
+  // ласты
+  put(-24, 5 + fl, 6, 3, pal.fins);
+  put(-23, 6 + fl, 9, 4, pal.fins);
+  put(-24, 16 - fl, 6, 3, pal.fins);
+  put(-23, 15 - fl, 9, 4, pal.fins);
+  // ноги
+  put(-15, 8 + fl * 0.5, 9, 4, pal.suit);
+  put(-15, 14 - fl * 0.5, 9, 4, pal.suit);
+  // корпус
+  put(-8, 6, 18, 12, pal.dark);
+  put(-8, 7, 17, 10, pal.suit);
+  put(-8, 13, 17, 4, pal.suitHi);
+  // пояс
+  put(-2, 7, 3, 10, pal.fins);
+  // баллон за спиной
+  put(-12, 3, 12, 5, pal.tank);
+  put(-12, 3, 12, 2, pal.tankHi);
+  // шланг
+  put(0, 2, 8, 2, pal.hose);
+  put(8, 3, 2, 4, pal.hose);
+  // голова и маска
+  put(7, 5, 10, 11, pal.dark);
+  put(8, 6, 8, 9, pal.hood);
+  put(10, 7, 7, 7, pal.glass);
+  put(11, 8, 3, 2, pal.glassHi);
+  // рука вперёд
+  put(14, 14, 8, 3, pal.suit);
+  put(21, 13, 4, 4, pal.skin);
+  // пузырьки из маски
+  for (let i = 0; i < 4; i++) {
+    const bt = (t * 26 + i * 15) % 60;
+    put(15 + Math.sin(t * 3 + i) * 2, 4 - bt * 0.5, 2, 2, 'rgba(255,255,255,0.75)');
+  }
+}
+
 const SCENES = {
   title:  { draw: sceneTitle },
   night:  {
@@ -526,7 +672,20 @@ const SCENES = {
   },
   sea:    {
     draw: sceneSea,
-    hero: { canopyA: '#ffe1c0', canopyB: '#ff7fa8', canopyEdge: '#c8455a', lines: '#ffd9a8', body: '#2b6b7a', bodyHi: '#4a97a8', skin: '#f2c9a8', hair: '#20303f', legs: '#1f4f5c' },
-    word: { fill: '#fff6e2', shadow: '#4a0512', glow: 'rgba(255,200,160,0.6)' }
+    drawHero: drawDiver,
+    heroY: 220,
+    heroBox: { w: 46, h: 22 },
+    hero: {
+      suit: '#26496b', suitHi: '#34618c', fins: '#ffd23f', dark: '#0d2437',
+      tank: '#c9d6de', tankHi: '#eef5f8', hose: '#111c26',
+      hood: '#1f3b57', glass: '#8ee8ff', glassHi: '#ffffff', skin: '#f2c9a8'
+    },
+    word: { fill: '#ffffff', shadow: '#06405e', glow: 'rgba(200,240,255,0.6)' }
+  },
+  gold:   {
+    draw: sceneGold,
+    heroY: 178,
+    hero: { canopyA: '#ffffff', canopyB: '#e8792a', canopyEdge: '#a8541a', lines: '#fff3bd', body: '#8a4a1c', bodyHi: '#b06a2a', skin: '#f6cba6', hair: '#4a2a10', legs: '#6b3a16' },
+    word: { fill: '#ffffff', shadow: '#7a4210', glow: 'rgba(255,240,190,0.6)' }
   }
 };

@@ -135,21 +135,22 @@ canvas {
 .poem-edit:focus { border-color: #ff85b8; }
 
 /* ---------- заставка ---------- */
-#s-title { padding-bottom: 36px; }
+#s-title { padding-bottom: 18px; }
 .titleblock { text-align: center; margin-bottom: 2px; }
 .artist {
   font-size: 11px; letter-spacing: 3px;
   color: #ffe6f2; text-transform: lowercase;
   text-shadow: 2px 2px 0 #6b1d4a;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .single {
-  font-size: 26px; line-height: 1.06; font-weight: 700;
+  font-size: 23px; line-height: 1.05; font-weight: 700;
   color: #fffdfa; letter-spacing: 1px;
   text-shadow: 3px 3px 0 #a02a63, 6px 6px 0 rgba(60,20,70,.4);
 }
 
-.parties { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.parties { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.parties .btn { padding: 8px 10px; }
 
 /* ---------- кнопки ---------- */
 .btn {

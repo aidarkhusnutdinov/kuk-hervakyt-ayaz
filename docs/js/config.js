@@ -28,5 +28,6 @@ const PARTIES = [
   { id: 'night',  title: 'Ак күзле төн карый', scene: 'night',  hint: 'ночная' },
   { id: 'meadow', title: 'Болыннар гүзәл',     scene: 'meadow', hint: 'Карадуган' },
   { id: 'red',    title: 'Кызар',              scene: 'red',    hint: 'злая' },
-  { id: 'sea',    title: 'Диңгез',             scene: 'sea',    hint: 'под водой' }
+  { id: 'sea',    title: 'Диңгез',             scene: 'sea',    hint: 'под водой' },
+  { id: 'gold',   title: 'Алтын кояш нурлары', scene: 'gold',   hint: 'золотая' }
 ];

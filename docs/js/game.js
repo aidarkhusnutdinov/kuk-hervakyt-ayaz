@@ -84,7 +84,7 @@ const state = {
   lists: [],       // списки падающих слов по раундам
   caught: 0,
   words: [],       // активные падающие слова
-  hero: { x: W / 2, target: W / 2, y: 168 },
+  hero: { x: W / 2, target: W / 2, y: 168, dir: 1 },
   sparks: [],
   freeze: 0
 };
@@ -140,6 +140,7 @@ function choose(p) {
   state.party = p;
   state.scene = p.scene;
   state.title = p.title;
+  state.hero.y = SCENES[p.scene].heroY || 168;
   state.poem = [];
   state.caught = 0;
   buildLists();
@@ -331,7 +332,7 @@ function buildPoster(cb) {
 
   // фон — текущая сцена, растянутая на всю сторис
   p.drawImage(cv, 0, 0, W, H, -100, 0, W * 4, H * 4);
-  p.fillStyle = 'rgba(30,8,40,0.18)';
+  p.fillStyle = 'rgba(30,8,40,0.08)';
   p.fillRect(0, 0, PW, PH);
 
   // облако с текстом
@@ -509,7 +510,7 @@ function loop(now) {
   if (state.scene !== 'title') {
     if (state.screen === 's-game') update(dt);
     drawWords(scene);
-    drawHero(g, state.hero.x, state.hero.y, scene.hero, clock);
+    (scene.drawHero || drawHero)(g, state.hero.x, state.hero.y, scene.hero, clock, state.hero.dir);
     drawSparks(g, dt);
   }
 
@@ -525,12 +526,16 @@ function update(dt) {
   if (kv) h.target = h.x + kv * 40;
 
   h.target = Math.max(24, Math.min(W - 24, h.target));
+  const before = h.x;
   h.x += (h.target - h.x) * Math.min(1, 9 * dt);
   h.x = Math.max(24, Math.min(W - 24, h.x));
+  if (h.x - before > 0.4) h.dir = 1;
+  else if (h.x - before < -0.4) h.dir = -1;
 
   if (state.freeze > 0) { state.freeze -= dt; return; }
 
-  const box = { x: h.x - 21, y: h.y, w: 42, h: 58 };
+  const hb = (SCENES[state.scene] || {}).heroBox || { w: 42, h: 58 };
+  const box = { x: h.x - hb.w / 2, y: h.y, w: hb.w, h: hb.h };
   for (const wd of state.words) {
     wd.y += wd.v * dt;
     wd.x += Math.sin(clock * 0.8 + wd.ph) * 0.25;
