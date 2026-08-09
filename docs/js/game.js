@@ -79,6 +79,7 @@ const state = {
   screen: 'title',
   scene: 'title',
   party: null,
+  title: '',       // заголовок стихотворения (сначала название партии, можно поправить)
   poem: [],        // строки стихотворения (название партии — отдельно, это заголовок)
   lists: [],       // списки падающих слов по раундам
   caught: 0,
@@ -138,6 +139,7 @@ function choose(p) {
   snd.click();
   state.party = p;
   state.scene = p.scene;
+  state.title = p.title;
   state.poem = [];
   state.caught = 0;
   buildLists();
@@ -153,7 +155,7 @@ function renderPoem(el, opts) {
   el.innerHTML = '';
   const h = document.createElement('div');
   h.className = 'ptitle';
-  h.textContent = state.party ? state.party.title : '';
+  h.textContent = state.title;
   el.appendChild(h);
 
   state.poem.forEach((line, i) => {
@@ -254,7 +256,7 @@ function onCatch(word) {
 
 /* ---------- финал ---------- */
 function poemText() {
-  return (state.party ? state.party.title + '\n\n' : '') + state.poem.join('\n');
+  return (state.title ? state.title + '\n\n' : '') + state.poem.join('\n');
 }
 
 function shareText() {
@@ -267,6 +269,7 @@ function shareText() {
 function finish(caughtWord) {
   state.words = [];
   snd.done();
+  stopEditing(false);
   renderPoem($('final-poem'), { caughtWord: caughtWord });
   $('hud').textContent = '';
   show('s-final');
@@ -279,6 +282,44 @@ function toast(msg) {
   $('ui').appendChild(t);
   setTimeout(() => t.remove(), 2600);
 }
+
+/* ---------- правка текста перед отправкой ---------- */
+let editing = false;
+
+function startEditing() {
+  editing = true;
+  const ta = $('final-edit');
+  ta.value = (state.title ? state.title + '\n' : '') + state.poem.join('\n');
+  ta.rows = Math.min(9, state.poem.length + 2);
+  $('final-poem').hidden = true;
+  ta.hidden = false;
+  $('sh-edit').textContent = 'готово';
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+
+function stopEditing(save) {
+  const ta = $('final-edit');
+  if (editing && save) {
+    const rows = ta.value.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 9);
+    if (rows.length) {
+      state.title = rows[0];
+      state.poem = rows.slice(1);
+    }
+    renderPoem($('final-poem'), {});
+  }
+  editing = false;
+  ta.hidden = true;
+  $('final-poem').hidden = false;
+  $('sh-edit').textContent = 'править';
+}
+
+function syncEdit() { if (editing) stopEditing(true); }
+
+$('sh-edit').onclick = () => {
+  snd.click();
+  if (editing) stopEditing(true); else startEditing();
+};
 
 /* ---------- картинка для инстаграма ---------- */
 function buildPoster(cb) {
@@ -295,9 +336,10 @@ function buildPoster(cb) {
 
   // облако с текстом
   const lines = state.poem;
-  const lh = 86;
+  const lh = lines.length > 6 ? 70 : 86;
   const bodyH = 150 + lines.length * lh + 50;
-  const bx = 100, by = 1040, bw = 880;
+  const bx = 100, bw = 880;
+  const by = Math.max(320, Math.min(1040, 1680 - bodyH));
   const parts = [
     { t: 'r', x: bx, y: by, w: bw, h: bodyH },
     { t: 'e', cx: bx + 210, cy: by + 10,      rx: 150, ry: 80 },
@@ -327,7 +369,7 @@ function buildPoster(cb) {
   p.textBaseline = 'top';
   p.fillStyle = '#c0356a';
   p.font = 'bold 54px Menlo, Consolas, "Courier New", monospace';
-  p.fillText(state.party ? state.party.title : '', bx + bw / 2, by + 46);
+  p.fillText(state.title, bx + bw / 2, by + 46);
 
   p.fillStyle = '#ffc2dd';
   p.fillRect(bx + 120, by + 122, bw - 240, 4);
@@ -360,6 +402,7 @@ function buildPoster(cb) {
 }
 
 $('sh-insta').onclick = () => {
+  syncEdit();
   snd.click();
   toast('Рисую картинку…');
   buildPoster(async blob => {
@@ -384,6 +427,7 @@ $('sh-insta').onclick = () => {
 };
 
 $('sh-native').onclick = async () => {
+  syncEdit();
   const text = shareText();
   if (navigator.share) {
     try { await navigator.share({ title: CONFIG.ARTIST + ' — ' + CONFIG.SINGLE, text: text }); return; }
@@ -391,17 +435,18 @@ $('sh-native').onclick = async () => {
   }
   copy(text);
 };
-$('sh-tg').onclick = () => open('https://t.me/share/url?url=' +
+$('sh-tg').onclick = () => { syncEdit(); open('https://t.me/share/url?url=' +
   encodeURIComponent(CONFIG.RELEASE_URL) + '&text=' + encodeURIComponent(poemText() +
-  '\n\nСтихотворение написано здесь: ' + CONFIG.SITE_URL + '\nНовый сингл ' + CONFIG.ARTIST + ' — «' + CONFIG.SINGLE + '»:'));
-$('sh-wa').onclick = () => open('https://wa.me/?text=' + encodeURIComponent(shareText()));
-$('sh-mail').onclick = () => open('mailto:?subject=' +
+  '\n\nСтихотворение написано здесь: ' + CONFIG.SITE_URL + '\nНовый сингл ' + CONFIG.ARTIST + ' — «' + CONFIG.SINGLE + '»:')); };
+$('sh-wa').onclick = () => { syncEdit(); open('https://wa.me/?text=' + encodeURIComponent(shareText())); };
+$('sh-mail').onclick = () => { syncEdit(); open('mailto:?subject=' +
   encodeURIComponent('Стихотворение · ' + CONFIG.ARTIST + ' — ' + CONFIG.SINGLE) +
-  '&body=' + encodeURIComponent(shareText()));
-$('sh-copy').onclick = () => copy(shareText());
+  '&body=' + encodeURIComponent(shareText())); };
+$('sh-copy').onclick = () => { syncEdit(); copy(shareText()); };
 $('sh-again').onclick = () => {
   snd.click();
-  state.poem = []; state.caught = 0; state.words = []; state.scene = 'title'; state.party = null;
+  state.poem = []; state.caught = 0; state.words = []; state.scene = 'title';
+  state.party = null; state.title = ''; stopEditing(false);
   show('s-title');
 };
 

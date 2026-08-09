@@ -329,6 +329,150 @@ function jagged(g, base, color, amp, step, seed) {
 }
 
 /* =========================================================================
+   СЦЕНА 4 — ДИҢГЕЗ: под водой в красном море
+   ========================================================================= */
+const BUBBLES = seeded(30, 61);
+const FISH = seeded(9, 23);
+
+function sceneSea(g, t) {
+  drawSky(g, [
+    [0, '#ff9c6a'],
+    [46, '#f2603f'],
+    [120, '#cc2b34'],
+    [210, '#991426'],
+    [300, '#68091d'],
+    [396, '#440614']
+  ]);
+
+  // поверхность воды с волнами
+  for (let x = 0; x < W; x++) {
+    const h = 6 + Math.sin(x * 0.09 + t * 1.6) * 3 + Math.sin(x * 0.21 - t) * 2;
+    R(g, x, 0, 1, h, '#ffd9a8');
+    R(g, x, h, 1, 3, '#ffb27e');
+  }
+
+  // солнечные столбы света
+  for (let i = 0; i < 5; i++) {
+    const bx = 30 + i * 64 + Math.sin(t * 0.25 + i) * 14;
+    for (let y = 10; y < 300; y += 4) {
+      const w = 12 + y * 0.06;
+      R(g, bx + y * 0.16, y, w, 4, 'rgba(255,220,170,0.05)');
+    }
+  }
+
+  // дно
+  R(g, 0, 424, W, H - 424, '#7d1f2c');
+  for (let x = 0; x < W; x++) {
+    const h = 8 + Math.abs(Math.sin(x * 0.05)) * 8;
+    R(g, x, 424 - h, 1, h, '#8f2a34');
+  }
+  for (let i = 0; i < 60; i++) {
+    R(g, (i * 37) % W, 428 + ((i * 13) % 44), 2, 2, i % 3 ? '#a03a42' : '#611722');
+  }
+
+  // водоросли
+  weed(g, 24, 428, 66, t, '#c8455a');
+  weed(g, 52, 428, 48, t + 1.4, '#e0607a');
+  weed(g, 214, 428, 58, t + 0.6, '#c8455a');
+  weed(g, 292, 428, 72, t + 2.1, '#a83450');
+
+  // кораллы
+  coral(g, 84, 430, '#ff9ec4', '#ffd0e4');
+  coral(g, 152, 434, '#ffb27e', '#ffe1c0');
+  coral(g, 250, 430, '#d38ae8', '#f0c6ff');
+  brainCoral(g, 190, 436, '#ff7fa8');
+  brainCoral(g, 116, 440, '#e0607a');
+
+  // морские звёзды
+  star(g, 62, 452, '#ffd27a');
+  star(g, 226, 458, '#ff9ec4');
+
+  // рыбы
+  for (let i = 0; i < FISH.length; i++) {
+    const [a, b, c] = FISH[i];
+    const dir = b > 0.5 ? 1 : -1;
+    const speed = 10 + c * 26;
+    const raw = (t * speed + a * 500) % (W + 80);
+    const x = dir > 0 ? raw - 40 : W + 40 - raw;
+    const y = 120 + b * 260 + Math.sin(t * 1.4 + a * 8) * 7;
+    fish(g, x, y, dir, c > 0.6 ? '#ffd27a' : '#ffe9c9', c > 0.6 ? '#e0913a' : '#d8a98c', 1 + Math.round(c));
+  }
+
+  // медуза
+  const jy = 250 + Math.sin(t * 0.7) * 18;
+  circleFill(g, 286, jy, 9, 'rgba(255,200,225,0.85)');
+  for (let i = 0; i < 4; i++) {
+    R(g, 280 + i * 4, jy + 6, 2, 12 + Math.sin(t * 2 + i) * 4, 'rgba(255,200,225,0.6)');
+  }
+
+  // пузырьки
+  for (const [a, b, c] of BUBBLES) {
+    const y = H - ((t * (18 + c * 26) + b * 460) % 470);
+    const x = a * W + Math.sin(t * 1.6 + b * 9) * 5;
+    const r = c > 0.75 ? 3 : 2;
+    R(g, x, y, r, r, 'rgba(255,225,205,0.7)');
+  }
+}
+
+function weed(g, x, base, len, t, color) {
+  for (let i = 0; i < len; i += 4) {
+    const off = Math.sin(t * 1.1 + i * 0.16) * (i / len) * 7;
+    R(g, x + off, base - i, 4, 4, i % 8 ? color : '#ffffff22');
+    R(g, x + off, base - i, 2, 4, color);
+  }
+}
+
+function coral(g, x, base, c1, c2) {
+  R(g, x - 3, base - 20, 6, 22, c1);
+  R(g, x - 12, base - 30, 5, 16, c1);
+  R(g, x - 12, base - 34, 5, 6, c2);
+  R(g, x + 8, base - 34, 5, 20, c1);
+  R(g, x + 8, base - 38, 5, 6, c2);
+  R(g, x - 3, base - 30, 6, 6, c2);
+  R(g, x - 9, base - 22, 6, 4, c1);
+  R(g, x + 4, base - 26, 6, 4, c1);
+}
+
+function brainCoral(g, x, base, c) {
+  R(g, x - 10, base - 10, 21, 11, c);
+  R(g, x - 7, base - 14, 15, 5, c);
+  for (let i = -8; i < 9; i += 4) R(g, x + i, base - 12, 2, 8, 'rgba(90,10,30,0.45)');
+}
+
+function star(g, x, y, c) {
+  R(g, x - 1, y - 4, 3, 9, c);
+  R(g, x - 4, y - 1, 9, 3, c);
+  R(g, x - 3, y - 3, 2, 2, c);
+  R(g, x + 2, y - 3, 2, 2, c);
+  R(g, x - 3, y + 2, 2, 2, c);
+  R(g, x + 2, y + 2, 2, 2, c);
+}
+
+function fish(g, x, y, dir, c1, c2, size) {
+  const s = size || 1;
+  // клетка спрайта: dir > 0 — рыба плывёт вправо, головой вперёд
+  const put = (ox, oy, w, h, c) => {
+    const px = dir > 0 ? x + ox * s : x - (ox + w) * s;
+    R(g, px, y + oy * s, w * s, h * s, c);
+  };
+  // хвост
+  put(-4, 0, 2, 1, c1); put(-4, 5, 2, 1, c1);
+  put(-3, 1, 2, 1, c1); put(-3, 4, 2, 1, c1);
+  put(-2, 2, 2, 2, c1);
+  // тело
+  put(2, 0, 5, 1, c1);
+  put(1, 1, 7, 1, c1);
+  put(0, 2, 9, 1, c1);
+  put(0, 3, 9, 1, c2);
+  put(1, 4, 7, 1, c2);
+  put(2, 5, 5, 1, c2);
+  // плавник
+  put(3, -1, 3, 1, c1);
+  // глаз
+  put(6, 2, 1, 1, '#4a0512');
+}
+
+/* =========================================================================
    ПАРАШЮТИСТ
    ========================================================================= */
 function drawHero(g, x, y, pal, t) {
@@ -379,5 +523,10 @@ const SCENES = {
     draw: sceneRed,
     hero: { canopyA: '#ffd27a', canopyB: '#c11a18', canopyEdge: '#5c0208', lines: '#ffb43c', body: '#1a0206', bodyHi: '#3d0510', skin: '#e8b48f', hair: '#0d0103', legs: '#26040a' },
     word: { fill: '#fff3d6', shadow: '#2a0206', glow: 'rgba(255,120,40,0.6)' }
+  },
+  sea:    {
+    draw: sceneSea,
+    hero: { canopyA: '#ffe1c0', canopyB: '#ff7fa8', canopyEdge: '#c8455a', lines: '#ffd9a8', body: '#2b6b7a', bodyHi: '#4a97a8', skin: '#f2c9a8', hair: '#20303f', legs: '#1f4f5c' },
+    word: { fill: '#fff6e2', shadow: '#4a0512', glow: 'rgba(255,200,160,0.6)' }
   }
 };

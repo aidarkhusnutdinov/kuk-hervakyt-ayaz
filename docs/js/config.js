@@ -27,5 +27,6 @@ const CONFIG = {
 const PARTIES = [
   { id: 'night',  title: 'Ак күзле төн карый', scene: 'night',  hint: 'ночная' },
   { id: 'meadow', title: 'Болыннар гүзәл',     scene: 'meadow', hint: 'Карадуган' },
-  { id: 'red',    title: 'Кызар',              scene: 'red',    hint: 'злая' }
+  { id: 'red',    title: 'Кызар',              scene: 'red',    hint: 'злая' },
+  { id: 'sea',    title: 'Диңгез',             scene: 'sea',    hint: 'под водой' }
 ];
