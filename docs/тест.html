@@ -1,0 +1,166 @@
+<meta charset="utf-8">
+<title>Проверка звука · Safari</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<style>
+  body {
+    margin: 0; padding: 28px 20px 60px;
+    background: #1b1030; color: #ffe8f4;
+    font: 15px/1.6 Menlo, Consolas, "Courier New", monospace;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  p.sub { color: #b79ed0; margin: 0 0 22px; }
+  button {
+    display: block; width: 100%; margin: 0 0 10px;
+    padding: 16px; text-align: left; cursor: pointer;
+    font: inherit; color: #ffe8f4;
+    background: #2c1a4a; border: 2px solid #4a2f74; border-radius: 10px;
+  }
+  button.on { background: #c0356a; border-color: #ff8bb8; }
+  .nm { font-weight: bold; }
+  .ds { display: block; color: #cbb4e2; font-size: 13px; }
+  button.on .ds { color: #ffd6e6; }
+  .stop { background: #241539; border-color: #3d2a5c; text-align: center; }
+  #diag { color: #9f9; }
+</style>
+
+<div class="wrap">
+  <h1>Отчего трещит в Safari</h1>
+  <p class="sub">Два способа сыграть одну и ту же музыку. Звучать должны одинаково.
+    Слушай каждый секунд по двадцать и скажи, который трещит.</p>
+
+  <button data-mode="churn">
+    <span class="nm">А — как сейчас в игре</span>
+    <span class="ds">на каждую ноту создаётся новый генератор и тут же выбрасывается</span>
+  </button>
+  <button data-mode="fixed">
+    <span class="nm">Б — как в приставке</span>
+    <span class="ds">два генератора работают не переставая, у них меняется только высота и громкость</span>
+  </button>
+  <button class="stop" id="stop">стоп</button>
+  <p id="diag">&nbsp;</p>
+</div>
+
+<script>
+const C = window.AudioContext || window.webkitAudioContext;
+let ctx, master, mode = null, timer = null, beat = 0, t0 = 0, made = 0, madeShown = 0;
+
+const NOTES = [60, 64, 67, 72, 67, 64];   // одно и то же арпеджио в обоих режимах
+const SPB = 0.125;                        // восемь нот в секунду
+
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+/* ---------- общее ---------- */
+function init() {
+  if (ctx) return;
+  ctx = new C();
+  master = ctx.createGain();
+  master.gain.value = 0.18;
+  master.connect(ctx.destination);
+  noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+let noiseBuf = null;
+
+/* ---------- А: новый узел на каждую ноту ---------- */
+function churnNote(t, midi) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'square';
+  o.frequency.setValueAtTime(hz(midi), t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.5, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + SPB * 0.9);
+  o.connect(g); g.connect(master);
+  o.onended = () => { try { o.disconnect(); g.disconnect(); } catch (e) {} };
+  o.start(t); o.stop(t + SPB);
+  made += 2;
+
+  const s = ctx.createBufferSource(), sg = ctx.createGain();
+  s.buffer = noiseBuf;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 7000;
+  sg.gain.setValueAtTime(0.35, t);
+  sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  s.connect(hp); hp.connect(sg); sg.connect(master);
+  s.onended = () => { try { s.disconnect(); hp.disconnect(); sg.disconnect(); } catch (e) {} };
+  s.start(t, Math.random()); s.stop(t + 0.05);
+  made += 3;
+}
+
+/* ---------- Б: постоянные голоса, меняются только параметры ---------- */
+let vOsc = null, vGain = null, nSrc = null, nGain = null;
+
+function buildFixed() {
+  vOsc = ctx.createOscillator();
+  vOsc.type = 'square';
+  vGain = ctx.createGain();
+  vGain.gain.value = 0.0001;
+  vOsc.connect(vGain); vGain.connect(master);
+  vOsc.start();
+
+  nSrc = ctx.createBufferSource();
+  nSrc.buffer = noiseBuf;
+  nSrc.loop = true;
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass'; hp.frequency.value = 7000;
+  nGain = ctx.createGain();
+  nGain.gain.value = 0.0001;
+  nSrc.connect(hp); hp.connect(nGain); nGain.connect(master);
+  nSrc.start();
+  made += 6;
+}
+
+function fixedNote(t, midi) {
+  vOsc.frequency.setValueAtTime(hz(midi), t);
+  vGain.gain.setValueAtTime(0.0001, t);
+  vGain.gain.exponentialRampToValueAtTime(0.5, t + 0.005);
+  vGain.gain.exponentialRampToValueAtTime(0.0001, t + SPB * 0.9);
+  nGain.gain.setValueAtTime(0.35, t);
+  nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+}
+
+/* ---------- планировщик ---------- */
+function tick() {
+  while (t0 + beat * SPB < ctx.currentTime + 0.4) {
+    const t = t0 + beat * SPB;
+    const midi = NOTES[beat % NOTES.length] + (Math.floor(beat / 24) % 2 ? 5 : 0);
+    if (mode === 'churn') churnNote(t, midi); else fixedNote(t, midi);
+    beat++;
+  }
+}
+
+function play(m) {
+  stop();
+  init();
+  if (ctx.state === 'suspended') ctx.resume();
+  mode = m;
+  if (m === 'fixed') buildFixed();
+  t0 = ctx.currentTime + 0.1;
+  beat = 0; made = 0; madeShown = 0;
+  tick();
+  timer = setInterval(tick, 50);
+  document.querySelectorAll('button[data-mode]').forEach(b =>
+    b.classList.toggle('on', b.dataset.mode === m));
+}
+
+function stop() {
+  if (timer) { clearInterval(timer); timer = null; }
+  mode = null;
+  if (vOsc) { try { vOsc.stop(); nSrc.stop(); } catch (e) {} vOsc = null; nSrc = null; }
+  document.querySelectorAll('button[data-mode]').forEach(b => b.classList.remove('on'));
+}
+
+document.querySelectorAll('button[data-mode]').forEach(b => {
+  b.onclick = () => play(b.dataset.mode);
+});
+document.getElementById('stop').onclick = stop;
+
+setInterval(() => {
+  const d = document.getElementById('diag');
+  if (!mode) { d.innerHTML = '&nbsp;'; return; }
+  d.textContent = 'узлов создаётся: ' + (made - madeShown) + ' в секунду';
+  madeShown = made;
+}, 1000);
+</script>
