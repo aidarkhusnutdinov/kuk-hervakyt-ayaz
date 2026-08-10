@@ -46,7 +46,7 @@ document.querySelectorAll('.cloud').forEach(cloud => {
 /* ---------- звук ---------- */
 const snd = {
   on: true, ctx: null,
-  init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+  init() { this.ctx = AUDIO.get(); },
   play(freq, dur, type, vol) {
     if (!this.on) return;
     try {
@@ -56,7 +56,7 @@ const snd = {
       o.frequency.value = freq;
       a.gain.setValueAtTime(vol || 0.05, this.ctx.currentTime);
       a.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
-      o.connect(a); a.connect(this.ctx.destination);
+      o.connect(a); a.connect(AUDIO.sfx);
       o.start(); o.stop(this.ctx.currentTime + dur);
     } catch (e) { /* тишина лучше ошибки */ }
   },
@@ -71,12 +71,13 @@ const snd = {
 $('sound').onclick = () => {
   snd.on = !snd.on;
   $('sound').classList.toggle('off', !snd.on);
+  music.setOn(snd.on);
   if (snd.on) snd.click();
 };
 
 /* ---------- состояние ---------- */
 const state = {
-  screen: 'title',
+  screen: 's-title',
   scene: 'title',
   party: null,
   title: '',       // заголовок стихотворения (сначала название партии, можно поправить)
@@ -148,7 +149,11 @@ function choose(p) {
   show('s-howto');
 }
 
-$('howto-next').onclick = () => { snd.click(); askLine(); };
+/* Тема заставки играет и на экране с правилами — иначе её никто не услышит:
+   до первого касания экрана браузер вообще не даёт звучать, а первое касание
+   у большинства придётся на кнопку партии. Тема партии вступает здесь, когда
+   игра по-настоящему начинается. */
+$('howto-next').onclick = () => { snd.click(); music.play(state.scene); askLine(); };
 
 /* ---------- стихотворение на экране ---------- */
 function renderPoem(el, opts) {
@@ -446,6 +451,7 @@ $('sh-mail').onclick = () => { syncEdit(); open('mailto:?subject=' +
 $('sh-copy').onclick = () => { syncEdit(); copy(shareText()); };
 $('sh-again').onclick = () => {
   snd.click();
+  music.play('title');
   state.poem = []; state.caught = 0; state.words = []; state.scene = 'title';
   state.party = null; state.title = ''; stopEditing(false);
   show('s-title');
@@ -474,6 +480,36 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
+/* Счётчик для отладки звука: ?diag=1 в адресе. Показывает, насколько браузер
+   опаздывает раскладывать ноты и сколько раз пришлось сдвинуть отсчёт петли.
+   До 50 мс — нормально; большие числа значат, что отрисовка душит звук. */
+if (new URLSearchParams(location.search).get('diag')) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99;background:rgba(0,0,0,0.6);' +
+                    'color:#9f9;font:11px Menlo,monospace;padding:4px 6px;border-radius:4px;pointer-events:none';
+  document.body.appendChild(d);
+  let fpsT = performance.now();
+  setInterval(() => {
+    const now = performance.now();
+    const fps = Math.round(drawn * 1000 / (now - fpsT));
+    drawn = 0; fpsT = now;
+    d.textContent = 'кадров/с ' + fps +
+                    ' · опоздание ' + Math.round(music.lag * 1000) + ' мс' +
+                    ' · швов ' + music.skips +
+                    ' · буфер ' + (AUDIO.ctx ? Math.round(AUDIO.ctx.baseLatency * 1000) : '—') + ' мс';
+  }, 700);
+}
+
+/* браузер не даёт звучать до первого касания — заставка включается с него */
+function firstTouch() {
+  window.removeEventListener('pointerdown', firstTouch);
+  window.removeEventListener('keydown', firstTouch);
+  snd.init();
+  if (state.screen === 's-title') music.play('title');
+}
+window.addEventListener('pointerdown', firstTouch);
+window.addEventListener('keydown', firstTouch);
+
 let pointerDown = false;
 function pointerX(e) {
   const r = frame.getBoundingClientRect();
@@ -498,7 +534,22 @@ document.addEventListener('touchmove', e => {
 /* ---------- цикл ---------- */
 let last = performance.now(), clock = 0;
 
+/* Потолок частоты кадров. Тридцати хватает: пиксельная графика при них и
+   задумывалась, а нагрузка на отрисовку вдвое меньше — Safari иначе не успевает
+   и начинает трещать звуком. ?fps=60 в адресе снимает потолок. */
+const FPS_PARAM = new URLSearchParams(location.search).get('fps');
+const FPS_CAP = FPS_PARAM === null ? 30 : parseFloat(FPS_PARAM) || 0;
+let nextFrame = 0, drawn = 0;
+
 function loop(now) {
+  requestAnimationFrame(loop);
+
+  if (FPS_CAP > 0) {
+    if (now < nextFrame) return;
+    nextFrame = now + 1000 / FPS_CAP;
+  }
+  drawn++;
+
   let dt = (now - last) / 1000;
   last = now;
   if (dt > 0.1) dt = 0.1;
@@ -513,8 +564,6 @@ function loop(now) {
     (scene.drawHero || drawHero)(g, state.hero.x, state.hero.y, scene.hero, clock, state.hero.dir);
     drawSparks(g, dt);
   }
-
-  requestAnimationFrame(loop);
 }
 
 function update(dt) {

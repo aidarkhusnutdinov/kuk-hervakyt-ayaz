@@ -19,8 +19,29 @@ function circleFill(g, cx, cy, r, c) {
   }
 }
 
-/* небо полосами + дизеринг на стыках */
+/* Небо полосами + дизеринг на стыках.
+
+   Небо не меняется во времени, а дизеринг — это тысячи крошечных заливок.
+   Поэтому рисуем его один раз на отдельный холст и дальше просто копируем
+   картинку целиком: один вызов вместо тысяч. Safari на такой мелочи
+   захлёбывается и начинает трещать звуком. */
+const SKY_CACHE = {};
+
 function drawSky(g, stops) {
+  const key = stops.join('|');
+  let c = SKY_CACHE[key];
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const cg = c.getContext('2d');
+    cg.imageSmoothingEnabled = false;
+    paintSky(cg, stops);
+    SKY_CACHE[key] = c;
+  }
+  g.drawImage(c, 0, 0);
+}
+
+function paintSky(g, stops) {
   for (let i = 0; i < stops.length; i++) {
     const y0 = stops[i][0];
     const y1 = i + 1 < stops.length ? stops[i + 1][0] : H;
@@ -139,7 +160,25 @@ function sceneTitle(g, t) {
   }
 }
 
+/* Гряда холмов: столбик на каждый пиксель ширины, 320 заливок на вызов.
+   Горы не двигаются, поэтому — как и небо — рисуем один раз и копируем. */
+const RIDGE_CACHE = {};
+
 function ridge(g, base, color, amp, freq, seed) {
+  const key = [base, color, amp, freq, seed].join('|');
+  let c = RIDGE_CACHE[key];
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const cg = c.getContext('2d');
+    cg.imageSmoothingEnabled = false;
+    paintRidge(cg, base, color, amp, freq, seed);
+    RIDGE_CACHE[key] = c;
+  }
+  g.drawImage(c, 0, 0);
+}
+
+function paintRidge(g, base, color, amp, freq, seed) {
   for (let x = 0; x < W; x++) {
     const h = Math.abs(Math.sin(x * freq + seed) * amp) + Math.abs(Math.sin(x * freq * 2.3 + seed) * amp * 0.4);
     R(g, x, base - h, 1, H - base + h, color);
@@ -598,8 +637,12 @@ function wheat(g, base, len, step, t, stalk, ear) {
   for (let x = -2; x < W + 2; x += step) {
     const h = len - ((x * 7) % 9) - ((x * 13) % 5);
     const sway = Math.sin(t + x * 0.08) * 2.5;
-    for (let k = 0; k < h; k += 2) {
-      R(g, x + sway * (k / h), base - k, 2, 2, stalk);
+    // Стебель — сплошная линия в два пикселя, наклонённая к верхушке.
+    // Рисуем её четырьмя кусками вместо двух десятков: наклон всего 2,5
+    // пикселя, ступенька выходит меньше пикселя и глазу не видна.
+    for (let i = 0; i < 4; i++) {
+      const k0 = Math.round(h * i / 4), k1 = Math.round(h * (i + 1) / 4);
+      R(g, x + sway * (k0 / h), base - k1 + 1, 2, k1 - k0 + 1, stalk);
     }
     if ((x * 3) % 7 !== 0) {
       R(g, x + sway - 1, base - h - 4, 3, 5, ear);

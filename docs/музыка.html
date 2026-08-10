@@ -1,0 +1,73 @@
+<meta charset="utf-8">
+<title>Музыка · Күк һәрвакыт аяз</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<style>
+  body {
+    margin: 0; padding: 28px 20px 60px;
+    background: #1b1030; color: #ffe8f4;
+    font: 15px/1.6 Menlo, Consolas, "Courier New", monospace;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  p.sub { color: #b79ed0; margin: 0 0 26px; }
+  button {
+    display: block; width: 100%; margin: 0 0 10px;
+    padding: 14px 16px; text-align: left; cursor: pointer;
+    font: inherit; color: #ffe8f4;
+    background: #2c1a4a; border: 2px solid #4a2f74; border-radius: 10px;
+  }
+  button:hover { background: #3a2360; }
+  button.on { background: #c0356a; border-color: #ff8bb8; }
+  .nm { font-weight: bold; }
+  .ds { display: block; color: #cbb4e2; font-size: 13px; }
+  button.on .ds { color: #ffd6e6; }
+  .stop { background: #241539; border-color: #3d2a5c; text-align: center; }
+</style>
+
+<div class="wrap">
+  <h1>Пять версий «Күк һәрвакыт аяз»</h1>
+  <p class="sub">Ноты сняты с миди из аблетона. Звук синтезируется браузером, файлов нет.</p>
+  <div id="list"></div>
+  <button class="stop" id="stop">стоп</button>
+  <p class="sub" id="diag">&nbsp;</p>
+</div>
+
+<script src="js/music.js?v=14"></script>
+<script>
+const LIST = [
+  ['meadow', '2 · Болыннар гүзәл', 'Карадуган — бодрый поп-чиптюн, оригинальный темп 107'],
+  ['night',  '1 · Ак күзле төн карый', 'ночная — медленно, гулко, длинное эхо, 88'],
+  ['red',    '3 · Кызар', 'злая — жёстко, шестнадцатые, лид ниже октавой, 128'],
+  ['sea',    '4 · Диңгез', 'под водой — всё придушено, звук плывёт, булькание, 92'],
+  ['gold',   '5 · Алтын кояш нурлары', 'золотая — мерцающее арпеджио, лид удвоен, 100'],
+  ['title',  '· заставка', 'тихая — мелодия вступает со второй половины, 96']
+];
+
+const list = document.getElementById('list');
+LIST.forEach(([id, nm, ds]) => {
+  const b = document.createElement('button');
+  b.innerHTML = '<span class="nm">' + nm + '</span><span class="ds">' + ds + '</span>';
+  b.dataset.id = id;
+  b.onclick = () => {
+    music.play(id);
+    mark(id);
+  };
+  list.appendChild(b);
+});
+document.getElementById('stop').onclick = () => { music.stop(); mark(null); };
+
+function mark(id) {
+  list.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+}
+
+/* Диагностика: насколько браузер опаздывает раскладывать ноты.
+   До 50 мс — нормально, музыка идёт ровно. Больше — браузер подвешивает
+   таймеры, и в этот момент в музыке будет слышен шов. */
+setInterval(() => {
+  const d = document.getElementById('diag');
+  if (!music.playing) { d.innerHTML = '&nbsp;'; return; }
+  d.textContent = 'опоздание планировщика: ' + Math.round(music.lag * 1000) +
+                  ' мс · швов: ' + music.skips;
+}, 500);
+</script>
