@@ -190,6 +190,7 @@ const music = {
   lag: 0,         // самое большое опоздание планировщика, секунды
   skips: 0,       // сколько раз пришлось сдвигать отсчёт
   timer: null,
+  asleep: false,  // вкладку увели — контекст остановлен
   nodes: null,    // цепочка эффектов текущей версии
   waves: {},      // кэш форм волны
   noise: null,
@@ -245,6 +246,35 @@ const music = {
       setTimeout(() => { try { n.out.disconnect(); } catch (e) {} }, 600);
       this.nodes = null;
     }
+  },
+
+  /* Вкладку увели — уходим в сон.
+
+     В фоне браузер режет таймеры до раза в секунду, планировщик просыпает
+     доли, и музыка возвращается рваньём из швов. Поэтому на время ухода
+     останавливаем аудиоконтекст целиком: его часы замирают вместе со звуком,
+     и после возврата петля продолжается ровно с того же места. */
+  sleep() {
+    if (!this.playing || this.asleep) return;
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    this.asleep = true;
+    const ctx = AUDIO.ctx;
+    if (ctx && ctx.state === 'running') ctx.suspend();
+  },
+
+  wake() {
+    if (!this.asleep) return;
+    this.asleep = false;
+    const ctx = AUDIO.ctx;
+    if (!ctx) return;
+    const go = () => {
+      if (!this.playing || this.asleep) return;
+      this.lag = 0;
+      this.tick();
+      if (!this.timer) this.timer = setInterval(() => this.tick(), 60);
+    };
+    if (ctx.state === 'suspended') ctx.resume().then(go, () => {});
+    else go();
   },
 
   setOn(v) {
@@ -557,3 +587,13 @@ const music = {
     }
   }
 };
+
+/* Уход из окна: отправка в мессенджер, переключение вкладки, блокировка
+   экрана. Ловим и visibilitychange, и blur/focus: на компе окно «Поделиться»
+   забирает фокус, но вкладка при этом остаётся видимой, и одного
+   visibilitychange не хватает. */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) music.sleep(); else music.wake();
+});
+window.addEventListener('blur', () => music.sleep());
+window.addEventListener('focus', () => music.wake());
