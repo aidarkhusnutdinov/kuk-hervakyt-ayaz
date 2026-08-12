@@ -278,7 +278,7 @@ function sceneMeadow(g, t) {
 
   // ивы
   willow(g, 42, 330, t, 1);
-  willow(g, 268, 356, t, -1);
+  willow(g, 199, 362, t, -1);
 
   // пыльца
   for (const [a, b, c] of POLLEN) {
@@ -298,12 +298,13 @@ function willow(g, x, base, t, dir) {
   R(g, x - 22, base - 100, 44, 10, '#63a24b');
   R(g, x - 12, base - 106, 24, 8, '#7dbb5e');
   R(g, x - 34, base - 82, 68, 8, '#3f7330');
-  // плакучие ветви
-  for (let i = -4; i <= 4; i++) {
-    const bx = x + i * 8 + sway * (Math.abs(i) / 4);
-    const len = 30 - Math.abs(i) * 3 + ((i * 7) % 5);
+  // плакучие ветви: крайняя правая убрана — она висела за краем кроны.
+  // Длины идут ровной лесенкой, без случайных прибавок: так силуэт чище.
+  for (let i = -4; i <= 3; i++) {
+    const bx = x + i * 8 - 2 + sway * (Math.abs(i) / 4);
+    const len = 34 - Math.abs(i) * 3;
     R(g, bx, base - 76, 4, len, i % 2 ? '#4f8a3c' : '#63a24b');
-    R(g, bx + 1, base - 76 + len, 2, 6, '#3f7330');
+    R(g, bx + 1, base - 76 + len, 2, 5, '#3f7330');
   }
 }
 

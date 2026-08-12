@@ -261,15 +261,18 @@ function onCatch(word) {
 }
 
 /* ---------- финал ---------- */
+/* Заголовок партии остаётся только на экране — тем, чем делятся,
+   уходят одни строки стихотворения. */
 function poemText() {
-  return (state.title ? state.title + '\n\n' : '') + state.poem.join('\n');
+  return state.poem.join('\n');
 }
 
 function shareText() {
   return poemText() +
     '\n\n— — —\n' +
-    'Стихотворение написано здесь: ' + CONFIG.SITE_URL + '\n' +
-    'Новый сингл ' + CONFIG.ARTIST + ' — «' + CONFIG.SINGLE + '»: ' + CONFIG.RELEASE_URL;
+    L('posterTop').join(' ') + '\n' +
+    L('posterBottom').slice(0, -1).join(' ') + '\n' +
+    L('posterBottom').slice(-1);
 }
 
 function finish(caughtWord) {
@@ -328,6 +331,184 @@ $('sh-edit').onclick = () => {
 };
 
 /* ---------- картинка для инстаграма ---------- */
+
+/* Фон сториз всегда один — ива из Карадугана, крупным планом.
+   Сцену рисуем заново в отдельный буфер, чтобы картинка не зависела
+   от того, какую партию человек играл и что было на экране. */
+const POSTER_BG = { x0: 0, y0: -89, w: 320 };  // окно в сцене (в её пикселях)
+const POSTER_T = 0.6;                          // время анимации — чтобы кадр был всегда один и тот же
+const POSTER_BANDS = { top: 150, bottom: 1600 };
+
+function sceneBuffer() {
+  const bc = document.createElement('canvas');
+  bc.width = W; bc.height = H;
+  const b = bc.getContext('2d');
+  b.imageSmoothingEnabled = false;
+  return { canvas: bc, ctx: b };
+}
+
+/* натягивает буфер сцены на сторис через одно и то же окно */
+function blitScene(p, bc, PW, PH) {
+  const k = PW / POSTER_BG.w;                  // масштаб сцены на сторис
+  const ch = PH / k;                           // высота окна в пикселях сцены
+  const y0 = POSTER_BG.y0;
+
+  p.imageSmoothingEnabled = false;
+  if (y0 < 0) {                                // окно выше сцены — добираем небо
+    const gap = -y0 * k;
+    p.drawImage(bc, POSTER_BG.x0, 0, POSTER_BG.w, 1, 0, 0, PW, gap);
+    p.drawImage(bc, POSTER_BG.x0, 0, POSTER_BG.w, ch + y0, 0, gap, PW, PH - gap);
+    return;
+  }
+  p.drawImage(bc, POSTER_BG.x0, y0, POSTER_BG.w, ch, 0, 0, PW, PH);
+}
+
+function drawPosterBg(p, PW, PH) {
+  const buf = sceneBuffer();
+  SCENES.meadow.draw(buf.ctx, POSTER_T);
+  blitScene(p, buf.canvas, PW, PH);
+}
+
+/* Ива переднего плана — поверх облака со стихом, чтобы облако не висело
+   отдельной каплей, а пряталось в ветвях. Координаты обязаны совпадать
+   с той же ивой в сцене, иначе она двоится. */
+const POSTER_TREE = { x: 199, base: 362 };
+
+function drawPosterTree(p, PW, PH) {
+  const buf = sceneBuffer();
+  willow(buf.ctx, POSTER_TREE.x, POSTER_TREE.base, POSTER_T, -1);
+  blitScene(p, buf.canvas, PW, PH);
+}
+
+const CLOUD_STEP = 4;   // ступенька у облаков
+const PIXEL_STEP = 1;   // текст рисуем в полный размер: мельче — и татарские буквы не различить
+
+/* надпись: отдельный буфер, чтобы её можно было огрубить до пикселей */
+function pixelText(p, text, cx, top, px, color, bold) {
+  const fs = Math.max(8, Math.round(px / PIXEL_STEP));
+  const font = (bold ? 'bold ' : '') + fs + 'px Menlo, Consolas, "Courier New", monospace';
+  const buf = document.createElement('canvas');
+  let b = buf.getContext('2d');
+  b.font = font;
+  buf.width = Math.ceil(b.measureText(text).width) + 2;
+  buf.height = Math.ceil(fs * 1.45);
+  b = buf.getContext('2d');
+  b.font = font;
+  b.textBaseline = 'top';
+  b.fillStyle = '#000000';
+  b.fillText(text, 1, 0);
+  harden(b, buf.width, buf.height, color, 128);
+
+  const w = buf.width * PIXEL_STEP, h = buf.height * PIXEL_STEP;
+  p.imageSmoothingEnabled = false;
+  p.drawImage(buf, Math.round(cx - w / 2), Math.round(top), w, h);
+  return w;
+}
+
+/* ширина надписи на готовом кегле */
+function pixelWidth(text, px) {
+  const fs = Math.max(8, Math.round(px / PIXEL_STEP));
+  const b = document.createElement('canvas').getContext('2d');
+  b.font = fs + 'px Menlo, Consolas, "Courier New", monospace';
+  return b.measureText(text).width * PIXEL_STEP;
+}
+
+/* Сглаживание превращает мелкий буфер в мутную кашу при растяжении.
+   Поэтому полутона выжигаем: пиксель либо есть, либо нет. */
+function harden(b, w, h, color, threshold) {
+  const img = b.getImageData(0, 0, w, h);
+  const d = img.data;
+  const r = parseInt(color.slice(1, 3), 16);
+  const g2 = parseInt(color.slice(3, 5), 16);
+  const bl = parseInt(color.slice(5, 7), 16);
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] >= (threshold || 128)) {
+      d[i] = r; d[i + 1] = g2; d[i + 2] = bl; d[i + 3] = 255;
+    } else {
+      d[i + 3] = 0;
+    }
+  }
+  b.putImageData(img, 0, 0);
+}
+
+/* Облако с каймой — как в интерфейсе игры, но ступеньками:
+   рисуем в мелкий буфер и растягиваем без сглаживания, как надписи. */
+function drawCloud(p, x, y, w, h, opts) {
+  opts = opts || {};
+  const S = CLOUD_STEP;
+  const cw = Math.ceil(p.canvas.width / S), ch = Math.ceil(p.canvas.height / S);
+  const c = document.createElement('canvas');
+  c.width = cw; c.height = ch;
+  let b = c.getContext('2d');
+
+  const rx = x / S, ry = y / S, rw = w / S, rh = h / S;
+  /* колбаска: ровная капсула с одинаковыми пузырями по краям —
+     та же лепка, что у облаков, только вытянутая и симметричная */
+  const parts = opts.roll ? (() => {
+    const a = [{ t: 'r', x: rx, y: ry, w: rw, h: rh, r: rh / 2 }];
+    for (let i = 0; i < 6; i++) {                 // ровная волна по обоим краям
+      const cx = rx + rw * (0.14 + i * 0.144);
+      a.push({ t: 'e', cx: cx, cy: ry,      rx: rw * 0.085, ry: rh * 0.20 });
+      a.push({ t: 'e', cx: cx, cy: ry + rh, rx: rw * 0.085, ry: rh * 0.20 });
+    }
+    return a;
+  })() : [
+    { t: 'r', x: rx, y: ry, w: rw, h: rh },
+    { t: 'e', cx: rx + rw * 0.24, cy: ry + 8 / S,      rx: rw * 0.17, ry: rh * 0.38 },
+    { t: 'e', cx: rx + rw * 0.51, cy: ry - 8 / S,      rx: rw * 0.20, ry: rh * 0.46 },
+    { t: 'e', cx: rx + rw * 0.78, cy: ry + 10 / S,     rx: rw * 0.15, ry: rh * 0.34 },
+    // низ: либо два пузыря, либо один широкий — чтобы облако не выглядело вымем
+    opts.wideBottom
+      ? { t: 'e', cx: rx + rw * 0.50, cy: ry + rh, rx: rw * 0.36, ry: rh * 0.15 }
+      : { t: 'e', cx: rx + rw * 0.29, cy: ry + rh, rx: rw * 0.16, ry: rh * 0.32 },
+    opts.wideBottom
+      ? { t: 'e', cx: rx + rw * 0.50, cy: ry + rh, rx: rw * 0.36, ry: rh * 0.15 }
+      : { t: 'e', cx: rx + rw * 0.69, cy: ry + rh - 6 / S, rx: rw * 0.14, ry: rh * 0.28 }
+  ];
+  const paint = (grow, color) => {
+    b.fillStyle = color;
+    parts.forEach(s => {
+      b.beginPath();
+      if (s.t === 'r') {
+        const r = ((s.r !== undefined ? s.r * S : 40) + grow * S) / S;
+        if (b.roundRect) b.roundRect(s.x - grow, s.y - grow, s.w + 2 * grow, s.h + 2 * grow, r);
+        else b.rect(s.x - grow, s.y - grow, s.w + 2 * grow, s.h + 2 * grow);
+      } else {
+        b.ellipse(s.cx, s.cy, s.rx + grow, s.ry + grow, 0, 0, Math.PI * 2);
+      }
+      b.fill();
+    });
+  };
+  paint((opts.grow || 10) / S, '#000000');
+  harden(b, cw, ch, opts.edge || '#ffc2dd');
+
+  const c2 = document.createElement('canvas');
+  c2.width = cw; c2.height = ch;
+  const b2 = c2.getContext('2d');
+  const outer = b;
+  b = b2;
+  paint(0, '#000000');
+  harden(b2, cw, ch, opts.fill || '#fffdfa');
+  outer.globalCompositeOperation = 'source-over';
+  outer.drawImage(c2, 0, 0);
+
+  p.imageSmoothingEnabled = false;
+  p.drawImage(c, 0, 0, cw, ch, 0, 0, cw * S, ch * S);
+}
+
+/* подбирает кегль пиксельной надписи под ширину */
+function pixelFit(p, text, maxW, from, to) {
+  const buf = document.createElement('canvas').getContext('2d');
+  let px = from;
+  while (px > to) {
+    const fs = Math.max(8, Math.round(px / PIXEL_STEP));
+    buf.font = fs + 'px Menlo, Consolas, "Courier New", monospace';
+    if (buf.measureText(text).width * PIXEL_STEP <= maxW) break;
+    px -= PIXEL_STEP;
+  }
+  return px;
+}
+
 function buildPoster(cb) {
   const PW = 1080, PH = 1920;
   const pc = document.createElement('canvas');
@@ -335,74 +516,66 @@ function buildPoster(cb) {
   const p = pc.getContext('2d');
   p.imageSmoothingEnabled = false;
 
-  // фон — текущая сцена, растянутая на всю сторис
-  p.drawImage(cv, 0, 0, W, H, -100, 0, W * 4, H * 4);
-  p.fillStyle = 'rgba(30,8,40,0.08)';
-  p.fillRect(0, 0, PW, PH);
+  drawPosterBg(p, PW, PH);
 
-  // облако с текстом
-  const lines = state.poem;
-  const lh = lines.length > 6 ? 70 : 86;
-  const bodyH = 150 + lines.length * lh + 50;
-  const bx = 100, bw = 880;
-  const by = Math.max(320, Math.min(1040, 1680 - bodyH));
-  const parts = [
-    { t: 'r', x: bx, y: by, w: bw, h: bodyH },
-    { t: 'e', cx: bx + 210, cy: by + 10,      rx: 150, ry: 80 },
-    { t: 'e', cx: bx + 450, cy: by - 14,      rx: 175, ry: 105 },
-    { t: 'e', cx: bx + 690, cy: by + 16,      rx: 135, ry: 76 },
-    { t: 'e', cx: bx + 250, cy: by + bodyH,      rx: 145, ry: 72 },
-    { t: 'e', cx: bx + 600, cy: by + bodyH - 8,  rx: 125, ry: 62 }
-  ];
-  const paint = (grow, color) => {
-    p.fillStyle = color;
-    parts.forEach(s => {
-      p.beginPath();
-      if (s.t === 'r') {
-        if (p.roundRect) p.roundRect(s.x - grow, s.y - grow, s.w + 2 * grow, s.h + 2 * grow, 44 + grow);
-        else p.rect(s.x - grow, s.y - grow, s.w + 2 * grow, s.h + 2 * grow);
-      } else {
-        p.ellipse(s.cx, s.cy, s.rx + grow, s.ry + grow, 0, 0, Math.PI * 2);
-      }
-      p.fill();
-    });
-  };
-  paint(10, '#ffc2dd');
-  paint(0, '#fffdfa');
-
-  // заголовок — название партии
   p.textAlign = 'center';
   p.textBaseline = 'top';
-  p.fillStyle = '#c0356a';
-  p.font = 'bold 54px Menlo, Consolas, "Courier New", monospace';
-  p.fillText(state.title, bx + bw / 2, by + 46);
 
-  p.fillStyle = '#ffc2dd';
-  p.fillRect(bx + 120, by + 122, bw - 240, 4);
-
-  // строки
-  p.fillStyle = '#3a1c44';
-  let size = 46;
-  const maxW = bw - 120;
-  lines.forEach(l => {
-    while (size > 26) {
-      p.font = '' + size + 'px Menlo, Consolas, "Courier New", monospace';
-      if (p.measureText(l).width <= maxW) break;
-      size -= 2;
+  /* подбирает кегль так, чтобы строка влезла в ширину */
+  const fit = (text, max, from, to, bold) => {
+    let s = from;
+    while (s > to) {
+      p.font = (bold ? 'bold ' : '') + s + 'px Menlo, Consolas, "Courier New", monospace';
+      if (p.measureText(text).width <= max) break;
+      s -= 2;
     }
-  });
-  p.font = '' + size + 'px Menlo, Consolas, "Courier New", monospace';
-  lines.forEach((l, i) => p.fillText(l, bx + bw / 2, by + 170 + i * lh));
+    p.font = (bold ? 'bold ' : '') + s + 'px Menlo, Consolas, "Courier New", monospace';
+    return s;
+  };
 
-  // подпись
-  p.fillStyle = '#ffffff';
-  p.shadowColor = 'rgba(30,8,40,0.85)';
-  p.shadowOffsetX = 3; p.shadowOffsetY = 3;
-  p.font = 'bold 40px Menlo, Consolas, "Courier New", monospace';
-  p.fillText(CONFIG.ARTIST + ' — «' + CONFIG.SINGLE + '»', PW / 2, by + bodyH + 130);
-  p.font = '30px Menlo, Consolas, "Courier New", monospace';
-  p.fillText(CONFIG.SITE_URL.replace(/^https?:\/\//, ''), PW / 2, by + bodyH + 190);
-  p.shadowOffsetX = 0; p.shadowOffsetY = 0;
+  /* ---- облако со стихотворением: середина кадра, без заголовка ---- */
+  const lines = state.poem;
+  const bw = 690, bx = (PW - bw) / 2;
+  const maxW = bw - 84;
+
+  let size = 45;
+  lines.forEach(l => { size = Math.min(size, pixelFit(p, l, maxW, size, 20)); });
+  const lh = Math.round(size * 1.7);
+  const bodyH = 50 + lines.length * lh + 26;
+  const by = Math.round((PH - bodyH) / 2);
+
+  drawCloud(p, bx, by, bw, bodyH, { edge: '#ff8fbb', fill: '#fff3c4', grow: 16, wideBottom: true });
+
+  lines.forEach((l, i) => pixelText(p, l, bx + bw / 2, by + 50 + i * lh, size, '#3a1c44'));
+
+  drawPosterTree(p, PW, PH);
+
+  /* ---- подписи в облачках, сверху и снизу ----
+     Облачка не прижаты к краям кадра: сверху и снизу сторис перекрывает
+     интерфейс инстаграма, и подпись там просто не увидят. */
+  const speech = (y, rows, shape) => {
+    const inner = 860;
+    const head = rows.slice(0, -1), link = rows[rows.length - 1];
+    let sHead = 34;
+    head.forEach(t => { sHead = Math.min(sHead, pixelFit(p, t, inner, sHead, 25)); });
+    const sLink = pixelFit(p, link, inner, 52, 28);
+
+    const step = sHead + 16;
+    const h = 28 + head.length * step + 10 + Math.round(sLink * 1.45) + 24;
+    let w = pixelWidth(link, sLink);
+    head.forEach(t => { w = Math.max(w, pixelWidth(t, sHead)); });
+    w = Math.min(940, w + (shape === 'roll' ? 120 : 150));
+    const x = Math.round((PW - w) / 2);
+
+    drawCloud(p, x, y, w, h, { roll: shape === 'roll' });
+
+    let yy = y + 28;
+    head.forEach(t => { pixelText(p, t, PW / 2, yy, sHead, '#4a2a58'); yy += step; });
+    pixelText(p, link, PW / 2, yy + 10, sLink, '#c0356a', true);
+  };
+
+  speech(POSTER_BANDS.top, L('posterTop'));
+  speech(POSTER_BANDS.bottom, L('posterBottom'), 'roll');
 
   pc.toBlob(cb, 'image/png');
 }
