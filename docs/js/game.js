@@ -77,7 +77,7 @@ $('sound').onclick = () => {
 
 /* ---------- состояние ---------- */
 const state = {
-  screen: 's-title',
+  screen: 's-lang',
   scene: 'title',
   party: null,
   title: '',       // заголовок стихотворения (сначала название партии, можно поправить)
@@ -127,14 +127,49 @@ function show(id) {
 
 /* заставка: кнопки партий */
 const partiesEl = $('parties');
-PARTIES.forEach((p, i) => {
-  const b = document.createElement('button');
-  b.className = 'btn party';
-  b.innerHTML = '<span class="num">' + (i + 1) + '</span>' +
-                '<span class="nm">' + p.title + '<span class="hint">' + p.hint + '</span></span>';
-  b.onclick = () => choose(p);
-  partiesEl.appendChild(b);
-});
+
+function buildParties() {
+  partiesEl.innerHTML = '';
+  PARTIES.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.className = 'btn party';
+    b.innerHTML = '<span class="num">' + (i + 1) + '</span>' +
+                  '<span class="nm">' + p.title +
+                  '<span class="hint">' + L('partyHints')[p.id] + '</span></span>';
+    b.onclick = () => choose(p);
+    partiesEl.appendChild(b);
+  });
+}
+
+/* ---------- язык ---------- */
+/* Все надписи живут в STRINGS (config.js). Здесь они только расставляются
+   по местам — и заново, если человек сменил язык. */
+function applyLang() {
+  document.documentElement.lang = CONFIG.LANG === 'tt' ? 'tt' : 'ru';
+
+  $('title-choose').textContent = L('chooseParty');
+  $('howto-text').innerHTML = L('howto').map(t => '<p>' + t + '</p>').join('');
+  $('howto-next').textContent = L('btnNext');
+  $('line-next').textContent = L('btnCatch');
+  $('tip').innerHTML = L('tip').replace(/ /g, '&nbsp;');
+  $('sh-edit').textContent = editing ? L('editDone') : L('edit');
+  $('sh-native').textContent = L('btnSend');
+  $('sh-insta').textContent = L('btnInsta');
+  $('sh-mail').textContent = L('btnMail');
+  $('sh-copy').textContent = L('btnCopy');
+  $('sh-again').textContent = L('btnAgain');
+
+  buildParties();
+}
+
+function setLang(lang) {
+  CONFIG.LANG = lang;
+  try { localStorage.setItem('ayaz-lang', lang); } catch (e) { /* приватный режим */ }
+  applyLang();
+}
+
+$('lang-tt').onclick = () => { snd.click(); setLang('tt'); music.play('title'); show('s-title'); };
+$('lang-ru').onclick = () => { snd.click(); setLang('ru'); music.play('title'); show('s-title'); };
 
 function choose(p) {
   snd.click();
@@ -189,15 +224,13 @@ function renderPoem(el, opts) {
   }
 }
 
-const ORDINAL = ['', 'первой', 'второй', 'третьей', 'четвёртой', 'пятой', 'шестой'];
-
 function askLine(caughtWord) {
   state.words = [];
   const n = state.poem.length + 1;
   renderPoem($('line-poem'), { caughtWord: caughtWord, cursor: true });
   $('line-label').textContent = n === 1
-    ? 'Напиши начало первой строчки — два-три слова. Конец поймаешь в небе.'
-    : 'Напиши начало ' + (ORDINAL[n] || '') + ' строчки. Конец поймаешь в небе.';
+    ? L('lineFirst')
+    : L2('lineNext', { n: L('ordinal')[n] || n });
   $('line-err').textContent = '';
   $('line-input').value = '';
   show('s-line');
@@ -206,8 +239,8 @@ function askLine(caughtWord) {
 
 function submitLine() {
   const v = $('line-input').value.trim().replace(/\s+/g, ' ');
-  if (!v) { $('line-err').textContent = 'Нужно хотя бы одно слово'; return; }
-  if (v.split(' ').length > 6) { $('line-err').textContent = 'Слишком длинно — два-три слова'; return; }
+  if (!v) { $('line-err').textContent = L('errEmpty'); return; }
+  if (v.split(' ').length > 6) { $('line-err').textContent = L('errLong'); return; }
   snd.click();
   $('line-input').blur();
   state.poem.push(v);
@@ -222,7 +255,7 @@ function startRound() {
   state.words = list.map((w, i) => makeWord(w, i));
   state.freeze = 0;
   state.hero.x = state.hero.target = W / 2;
-  $('hud').textContent = 'строка ' + state.poem.length + ' из ' + CONFIG.CATCHES + '  ·  поймай слово';
+  $('hud').textContent = L2('hud', { n: state.poem.length, total: CONFIG.CATCHES });
   $('tip').classList.remove('hide');
   setTimeout(() => $('tip').classList.add('hide'), 3200);
   show('s-game');
@@ -302,7 +335,7 @@ function startEditing() {
   ta.rows = Math.min(9, state.poem.length + 2);
   $('final-poem').hidden = true;
   ta.hidden = false;
-  $('sh-edit').textContent = 'готово';
+  $('sh-edit').textContent = L('editDone');
   ta.focus();
   ta.setSelectionRange(ta.value.length, ta.value.length);
 }
@@ -320,7 +353,7 @@ function stopEditing(save) {
   editing = false;
   ta.hidden = true;
   $('final-poem').hidden = false;
-  $('sh-edit').textContent = 'править';
+  $('sh-edit').textContent = L('edit');
 }
 
 function syncEdit() { if (editing) stopEditing(true); }
@@ -583,9 +616,9 @@ function buildPoster(cb) {
 $('sh-insta').onclick = () => {
   syncEdit();
   snd.click();
-  toast('Рисую картинку…');
+  toast(L('toastDrawing'));
   buildPoster(async blob => {
-    if (!blob) { toast('Не вышло сделать картинку'); return; }
+    if (!blob) { toast(L('toastDrawFail')); return; }
     const file = new File([blob], 'kuk-hervakyt-ayaz.png', { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
@@ -601,7 +634,7 @@ $('sh-insta').onclick = () => {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    toast('Картинка сохранилась — выложи её в сторис');
+    toast(L('toastSaved'));
   });
 };
 
@@ -619,7 +652,7 @@ $('sh-tg').onclick = () => { syncEdit(); open('https://t.me/share/url?url=' +
   '\n\nСтихотворение написано здесь: ' + CONFIG.SITE_URL + '\nНовый сингл ' + CONFIG.ARTIST + ' — «' + CONFIG.SINGLE + '»:')); };
 $('sh-wa').onclick = () => { syncEdit(); open('https://wa.me/?text=' + encodeURIComponent(shareText())); };
 $('sh-mail').onclick = () => { syncEdit(); open('mailto:?subject=' +
-  encodeURIComponent('Стихотворение · ' + CONFIG.ARTIST + ' — ' + CONFIG.SINGLE) +
+  encodeURIComponent(L('mailSubject') + CONFIG.ARTIST + ' — ' + CONFIG.SINGLE) +
   '&body=' + encodeURIComponent(shareText())); };
 $('sh-copy').onclick = () => { syncEdit(); copy(shareText()); };
 $('sh-again').onclick = () => {
@@ -631,7 +664,7 @@ $('sh-again').onclick = () => {
 };
 
 function copy(text) {
-  const done = () => toast('Скопировано');
+  const done = () => toast(L('toastCopied'));
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
   } else fallbackCopy(text, done);
@@ -642,7 +675,7 @@ function fallbackCopy(text, done) {
   ta.style.cssText = 'position:fixed;opacity:0;';
   document.body.appendChild(ta);
   ta.select();
-  try { document.execCommand('copy'); done(); } catch (e) { toast('Не вышло скопировать'); }
+  try { document.execCommand('copy'); done(); } catch (e) { toast(L('toastCopyFail')); }
   ta.remove();
 }
 
@@ -801,3 +834,10 @@ function drawSparks(g, dt) {
 }
 
 requestAnimationFrame(loop);
+
+/* Язык: запомненный с прошлого раза или тот, что стоит в CONFIG.
+   Вызов внизу файла — applyLang трогает состояние, объявленное выше. */
+let savedLang = null;
+try { savedLang = localStorage.getItem('ayaz-lang'); } catch (e) { /* приватный режим */ }
+if (savedLang === 'ru' || savedLang === 'tt') CONFIG.LANG = savedLang;
+applyLang();
