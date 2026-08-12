@@ -70,6 +70,11 @@ const STRINGS = {
     toastCopyFail: 'Күчереп булмады',
     mailSubject: 'Шигырь · ',
 
+    // текст, который уходит в мессенджер или на почту
+    shareWrote: 'Бу шигырьне мин биредә яздым:',
+    shareAbout: 'ultramilausha — «Күк һәрвакыт аяз» җырына кушылып',
+    shareListen: 'Тыңларга:',
+
     posterTop: [
       'Бу шигырьне мин биредә яздым:',
       'ultramilausha.tatar/ayaz'
@@ -119,6 +124,11 @@ const STRINGS = {
     toastCopied: 'Скопировано',
     toastCopyFail: 'Не вышло скопировать',
     mailSubject: 'Стихотворение · ',
+
+    // текст, который уходит в мессенджер или на почту
+    shareWrote: 'Это стихотворение было написано тут:',
+    shareAbout: 'По мотивам песни ultramilausha — «Күк һәрвакыт аяз»',
+    shareListen: 'Слушать:',
 
     posterTop: [
       'Это стихотворение было написано тут:',

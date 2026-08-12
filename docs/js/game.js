@@ -300,12 +300,14 @@ function poemText() {
   return state.poem.join('\n');
 }
 
+/* Текст для мессенджеров — на языке, на котором играли, и со ссылками
+   целиком: короткий вид без http годится для картинки, но не для чата. */
 function shareText() {
   return poemText() +
     '\n\n— — —\n' +
-    L('posterTop').join(' ') + '\n' +
-    L('posterBottom').slice(0, -1).join(' ') + '\n' +
-    L('posterBottom').slice(-1);
+    L('shareWrote') + ' ' + CONFIG.SITE_URL + '\n' +
+    L('shareAbout') + '\n' +
+    L('shareListen') + ' ' + CONFIG.RELEASE_URL;
 }
 
 function finish(caughtWord) {
@@ -647,9 +649,12 @@ $('sh-native').onclick = async () => {
   }
   copy(text);
 };
+/* Телеграм сам подставляет url отдельной строкой — туда идёт сайт,
+   а ссылка на песню остаётся в тексте. */
 $('sh-tg').onclick = () => { syncEdit(); open('https://t.me/share/url?url=' +
-  encodeURIComponent(CONFIG.RELEASE_URL) + '&text=' + encodeURIComponent(poemText() +
-  '\n\nСтихотворение написано здесь: ' + CONFIG.SITE_URL + '\nНовый сингл ' + CONFIG.ARTIST + ' — «' + CONFIG.SINGLE + '»:')); };
+  encodeURIComponent(CONFIG.SITE_URL) + '&text=' + encodeURIComponent(poemText() +
+  '\n\n' + L('shareAbout') + '\n' + L('shareListen') + ' ' + CONFIG.RELEASE_URL + '\n' +
+  L('shareWrote'))); };
 $('sh-wa').onclick = () => { syncEdit(); open('https://wa.me/?text=' + encodeURIComponent(shareText())); };
 $('sh-mail').onclick = () => { syncEdit(); open('mailto:?subject=' +
   encodeURIComponent(L('mailSubject') + CONFIG.ARTIST + ' — ' + CONFIG.SINGLE) +
