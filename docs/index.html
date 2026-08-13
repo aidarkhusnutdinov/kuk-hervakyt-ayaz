@@ -10,10 +10,14 @@
      а игра останется по адресу /ayaz/ и ссылки не протухнут.
 
      Редирект сделан страницей, а не настройкой сервера, — чтобы работал
-     на любом хостинге одинаково и не зависел от .htaccess и панели. -->
-<meta http-equiv="refresh" content="0; url=/ayaz/">
-<link rel="canonical" href="/ayaz/">
-<script>location.replace('/ayaz/');</script>
+     на любом хостинге одинаково и не зависел от .htaccess и панели.
+
+     Путь относительный (ayaz/, а не /ayaz/) нарочно: на своём домене сайт
+     лежит в корне, а на GitHub Pages — в подпапке репозитория. Абсолютный
+     путь в подпапке приводит в никуда, относительный верен в обоих местах. -->
+<meta http-equiv="refresh" content="0; url=ayaz/">
+<link rel="canonical" href="ayaz/">
+<script>location.replace('ayaz/');</script>
 
 <style>
   body {
@@ -31,6 +35,6 @@
 </style>
 </head>
 <body>
-  <p><a href="/ayaz/">Күк һәрвакыт аяз</a></p>
+  <p><a href="ayaz/">Күк һәрвакыт аяз</a></p>
 </body>
 </html>
