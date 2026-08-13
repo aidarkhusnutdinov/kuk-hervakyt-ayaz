@@ -168,11 +168,12 @@ function setLang(lang) {
   applyLang();
 }
 
-$('lang-tt').onclick = () => { snd.click(); setLang('tt'); music.play('title'); show('s-title'); };
-$('lang-ru').onclick = () => { snd.click(); setLang('ru'); music.play('title'); show('s-title'); };
+$('lang-tt').onclick = () => { snd.click(); setLang('tt'); track('lang_tt'); music.play('title'); show('s-title'); };
+$('lang-ru').onclick = () => { snd.click(); setLang('ru'); track('lang_ru'); music.play('title'); show('s-title'); };
 
 function choose(p) {
   snd.click();
+  track('party_' + p.id);
   state.party = p;
   state.scene = p.scene;
   state.title = p.title;
@@ -188,7 +189,7 @@ function choose(p) {
    до первого касания экрана браузер вообще не даёт звучать, а первое касание
    у большинства придётся на кнопку партии. Тема партии вступает здесь, когда
    игра по-настоящему начинается. */
-$('howto-next').onclick = () => { snd.click(); music.play(state.scene); askLine(); };
+$('howto-next').onclick = () => { snd.click(); track('start'); music.play(state.scene); askLine(); };
 
 /* ---------- стихотворение на экране ---------- */
 function renderPoem(el, opts) {
@@ -279,6 +280,7 @@ function onCatch(word) {
   snd.catchWord();
   state.poem[state.poem.length - 1] += ' ' + word.text;
   state.caught++;
+  if (state.caught === 1) track('first_word');
   for (let i = 0; i < 22; i++) {
     state.sparks.push({
       x: state.hero.x, y: state.hero.y + 20,
@@ -312,6 +314,7 @@ function shareText() {
 
 function finish(caughtWord) {
   state.words = [];
+  track('finish');
   snd.done();
   stopEditing(false);
   renderPoem($('final-poem'), { caughtWord: caughtWord });
@@ -618,6 +621,7 @@ function buildPoster(cb) {
 $('sh-insta').onclick = () => {
   syncEdit();
   snd.click();
+  track('share_insta');
   toast(L('toastDrawing'));
   buildPoster(async blob => {
     if (!blob) { toast(L('toastDrawFail')); return; }
@@ -642,6 +646,7 @@ $('sh-insta').onclick = () => {
 
 $('sh-native').onclick = async () => {
   syncEdit();
+  track('share_native');
   const text = shareText();
   if (navigator.share) {
     try { await navigator.share({ title: CONFIG.ARTIST + ' — ' + CONFIG.SINGLE, text: text }); return; }
@@ -651,17 +656,18 @@ $('sh-native').onclick = async () => {
 };
 /* Телеграм сам подставляет url отдельной строкой — туда идёт сайт,
    а ссылка на песню остаётся в тексте. */
-$('sh-tg').onclick = () => { syncEdit(); open('https://t.me/share/url?url=' +
+$('sh-tg').onclick = () => { syncEdit(); track('share_tg'); open('https://t.me/share/url?url=' +
   encodeURIComponent(CONFIG.SITE_URL) + '&text=' + encodeURIComponent(poemText() +
   '\n\n' + L('shareAbout') + '\n' + L('shareListen') + ' ' + CONFIG.RELEASE_URL + '\n' +
   L('shareWrote'))); };
-$('sh-wa').onclick = () => { syncEdit(); open('https://wa.me/?text=' + encodeURIComponent(shareText())); };
-$('sh-mail').onclick = () => { syncEdit(); open('mailto:?subject=' +
+$('sh-wa').onclick = () => { syncEdit(); track('share_wa'); open('https://wa.me/?text=' + encodeURIComponent(shareText())); };
+$('sh-mail').onclick = () => { syncEdit(); track('share_mail'); open('mailto:?subject=' +
   encodeURIComponent(L('mailSubject') + CONFIG.ARTIST + ' — ' + CONFIG.SINGLE) +
   '&body=' + encodeURIComponent(shareText())); };
-$('sh-copy').onclick = () => { syncEdit(); copy(shareText()); };
+$('sh-copy').onclick = () => { syncEdit(); track('share_copy'); copy(shareText()); };
 $('sh-again').onclick = () => {
   snd.click();
+  track('again');
   music.play('title');
   state.poem = []; state.caught = 0; state.words = []; state.scene = 'title';
   state.party = null; state.title = ''; stopEditing(false);
