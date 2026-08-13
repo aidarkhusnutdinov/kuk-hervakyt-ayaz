@@ -654,12 +654,14 @@ $('sh-native').onclick = async () => {
   }
   copy(text);
 };
-/* Телеграм сам подставляет url отдельной строкой — туда идёт сайт,
-   а ссылка на песню остаётся в тексте. */
+/* Раньше сайт уходил отдельным параметром url, а подводка «написано тут:»
+   вставала последней строкой в расчёте, что телеграм подклеит ссылку следом.
+   Он этого не делает — фраза оставалась висеть с двоеточием в пустоту.
+   Теперь в телеграм уходит тот же текст, что и везде. Параметр url всё равно
+   обязателен, но текст самодостаточен и не зависит от того, что с ним сделают.
+   Превью телеграм построит сам по первой ссылке в сообщении. */
 $('sh-tg').onclick = () => { syncEdit(); track('share_tg'); open('https://t.me/share/url?url=' +
-  encodeURIComponent(CONFIG.SITE_URL) + '&text=' + encodeURIComponent(poemText() +
-  '\n\n' + L('shareAbout') + '\n' + L('shareListen') + ' ' + CONFIG.RELEASE_URL + '\n' +
-  L('shareWrote'))); };
+  encodeURIComponent(CONFIG.SITE_URL) + '&text=' + encodeURIComponent(shareText())); };
 $('sh-wa').onclick = () => { syncEdit(); track('share_wa'); open('https://wa.me/?text=' + encodeURIComponent(shareText())); };
 $('sh-mail').onclick = () => { syncEdit(); track('share_mail'); open('mailto:?subject=' +
   encodeURIComponent(L('mailSubject') + CONFIG.ARTIST + ' — ' + CONFIG.SINGLE) +
